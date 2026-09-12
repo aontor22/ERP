@@ -1,0 +1,6 @@
+{
+  "name": "ApexERP Enterprise Platform",
+  "description": "Comprehensive enterprise-grade modular ERP platform featuring multi-company organizational hierarchies, double-entry general ledger, inventory engine, sales, procurement, manufacturing MRP, HR/payroll, approval workflows, and immutable audit logs.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
