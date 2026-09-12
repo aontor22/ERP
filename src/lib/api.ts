@@ -87,4 +87,8 @@ export const api = {
   // Settings
   getSettings: () => fetchApi<any>('/api/v1/settings'),
   updateSettings: (data: any) => fetchApi<any>('/api/v1/settings', { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Multi-Currency & Real-Time Exchange Rates
+  getExchangeRates: (base?: string) =>
+    fetchApi<any>(`/api/v1/exchange-rates${base ? `?base=${encodeURIComponent(base)}` : ''}`),
 };

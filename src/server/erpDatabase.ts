@@ -379,13 +379,19 @@ class ERPDatabase {
       reference: 'PO-2026-0001',
       memo: 'Purchased Cotton Yarn 30/1 from Dhaka Yarn Traders on Credit',
       status: 'Posted',
+      currency: 'BDT',
+      currencySymbol: '৳',
+      exchangeRate: 1.0,
+      baseCurrency: 'BDT',
       totalDebit: 4200000,
       totalCredit: 4200000,
+      baseTotalDebit: 4200000,
+      baseTotalCredit: 4200000,
       postedBy: 'CFO Anwar Hossain',
       postedAt: '2026-09-01T10:15:00Z',
       lines: [
-        { accountId: 'acc-1210', accountCode: '1210', accountName: 'Inventory - Raw Materials', description: 'Raw Yarn Receipt', debit: 4200000, credit: 0 },
-        { accountId: 'acc-2010', accountCode: '2010', accountName: 'Accounts Payable (Trade Creditors)', description: 'Liability to Dhaka Yarn Traders', debit: 0, credit: 4200000 },
+        { accountId: 'acc-1210', accountCode: '1210', accountName: 'Inventory - Raw Materials', description: 'Raw Yarn Receipt', debit: 4200000, credit: 0, foreignDebit: 4200000, foreignCredit: 0 },
+        { accountId: 'acc-2010', accountCode: '2010', accountName: 'Accounts Payable (Trade Creditors)', description: 'Liability to Dhaka Yarn Traders', debit: 0, credit: 4200000, foreignDebit: 0, foreignCredit: 4200000 },
       ],
     },
     {
@@ -394,15 +400,21 @@ class ERPDatabase {
       companyId: 'comp-textile',
       date: '2026-09-05',
       reference: 'INV-2026-0001',
-      memo: 'Sales Invoice INV-2026-0001 to Inditex S.A. for Polo Shirts',
+      memo: 'Export Sales Invoice INV-2026-0001 to Inditex S.A. ($40,576.13 @ 121.50 BDT/USD)',
       status: 'Posted',
-      totalDebit: 4930000,
-      totalCredit: 4930000,
+      currency: 'USD',
+      currencySymbol: '$',
+      exchangeRate: 121.5,
+      baseCurrency: 'BDT',
+      totalDebit: 40576.13,
+      totalCredit: 40576.13,
+      baseTotalDebit: 4930000,
+      baseTotalCredit: 4930000,
       postedBy: 'Accountant Farzana Yasmin',
       postedAt: '2026-09-05T14:30:00Z',
       lines: [
-        { accountId: 'acc-1100', accountCode: '1100', accountName: 'Accounts Receivable (Trade Debtors)', description: 'Receivable from Inditex S.A.', debit: 4930000, credit: 0 },
-        { accountId: 'acc-4010', accountCode: '4010', accountName: 'Apparel Export Sales Revenue', description: 'Export 3400 Polo Shirts', debit: 0, credit: 4930000 },
+        { accountId: 'acc-1100', accountCode: '1100', accountName: 'Accounts Receivable (Trade Debtors)', description: 'Receivable from Inditex S.A. ($40,576.13 @ 121.50)', debit: 4930000, credit: 0, foreignDebit: 40576.13, foreignCredit: 0 },
+        { accountId: 'acc-4010', accountCode: '4010', accountName: 'Apparel Export Sales Revenue', description: 'Export 3400 Polo Shirts ($40,576.13 @ 121.50)', debit: 0, credit: 4930000, foreignDebit: 0, foreignCredit: 40576.13 },
       ],
     },
   ];
@@ -636,20 +648,27 @@ class ERPDatabase {
       invoiceDate: '2026-09-05',
       dueDate: '2026-11-05',
       status: 'Posted',
-      subTotal: 4930000,
+      currency: 'USD',
+      currencySymbol: '$',
+      exchangeRate: 121.5,
+      baseCurrency: 'BDT',
+      subTotal: 40576.13,
       taxTotal: 0,
-      grandTotal: 4930000,
+      grandTotal: 40576.13,
+      baseSubTotal: 4930000,
+      baseTaxTotal: 0,
+      baseGrandTotal: 4930000,
       amountPaid: 0,
-      balanceDue: 4930000,
+      balanceDue: 40576.13,
       journalEntryId: 'jv-002',
       items: [
         {
           productId: 'prod-003',
           productName: 'Premium Pique Polo Shirt - Navy (L)',
           quantity: 3400,
-          unitPrice: 1450,
+          unitPrice: 11.93,
           taxRate: 0,
-          lineTotal: 4930000,
+          lineTotal: 40576.13,
         },
       ],
     },
@@ -663,9 +682,16 @@ class ERPDatabase {
       invoiceDate: '2026-09-11',
       dueDate: '2026-10-11',
       status: 'Draft',
+      currency: 'BDT',
+      currencySymbol: '৳',
+      exchangeRate: 1.0,
+      baseCurrency: 'BDT',
       subTotal: 2400000,
       taxTotal: 360000,
       grandTotal: 2760000,
+      baseSubTotal: 2400000,
+      baseTaxTotal: 360000,
+      baseGrandTotal: 2760000,
       amountPaid: 0,
       balanceDue: 2760000,
       items: [
@@ -676,6 +702,38 @@ class ERPDatabase {
           unitPrice: 2400,
           taxRate: 15,
           lineTotal: 2400000,
+        },
+      ],
+    },
+    {
+      id: 'inv-003',
+      invoiceNumber: 'INV-2026-0003',
+      customerId: 'cust-002',
+      customerName: 'H&M Hennes & Mauritz GBC',
+      companyId: 'comp-textile',
+      invoiceDate: '2026-09-08',
+      dueDate: '2026-11-08',
+      status: 'Posted',
+      currency: 'EUR',
+      currencySymbol: '€',
+      exchangeRate: 132.8,
+      baseCurrency: 'BDT',
+      subTotal: 25000,
+      taxTotal: 0,
+      grandTotal: 25000,
+      baseSubTotal: 3320000,
+      baseTaxTotal: 0,
+      baseGrandTotal: 3320000,
+      amountPaid: 0,
+      balanceDue: 25000,
+      items: [
+        {
+          productId: 'prod-003',
+          productName: 'Premium Pique Polo Shirt - Navy (L)',
+          quantity: 2200,
+          unitPrice: 11.36,
+          taxRate: 0,
+          lineTotal: 25000,
         },
       ],
     },
@@ -966,10 +1024,19 @@ class ERPDatabase {
   public postJournalEntry(params: {
     reference: string;
     memo: string;
-    lines: { accountId: string; description: string; debit: number; credit: number }[];
+    lines: { accountId: string; description: string; debit: number; credit: number; foreignDebit?: number; foreignCredit?: number }[];
     postedBy: string;
     companyId: string;
+    currency?: string;
+    currencySymbol?: string;
+    exchangeRate?: number;
+    baseCurrency?: string;
   }): { success: boolean; entry?: JournalEntry; error?: string } {
+    const currency = params.currency || 'BDT';
+    const currencySymbol = params.currencySymbol || '৳';
+    const exchangeRate = Number(params.exchangeRate || 1);
+    const baseCurrency = params.baseCurrency || 'BDT';
+
     const totalDebit = params.lines.reduce((sum, l) => sum + Number(l.debit || 0), 0);
     const totalCredit = params.lines.reduce((sum, l) => sum + Number(l.credit || 0), 0);
 
@@ -977,20 +1044,30 @@ class ERPDatabase {
     if (Math.abs(totalDebit - totalCredit) > 0.01) {
       return {
         success: false,
-        error: `Accounting Validation Error: Total Debit (৳${totalDebit.toLocaleString()}) does not balance with Total Credit (৳${totalCredit.toLocaleString()})! Transaction aborted.`,
+        error: `Accounting Validation Error: Total Debit (${currencySymbol}${totalDebit.toLocaleString()}) does not balance with Total Credit (${currencySymbol}${totalCredit.toLocaleString()})! Transaction aborted.`,
       };
     }
 
     const nextNumber = `JV-2026-${String(this.journalEntries.length + 1).padStart(4, '0')}`;
+    const baseTotalDebit = Number((totalDebit * exchangeRate).toFixed(2));
+    const baseTotalCredit = Number((totalCredit * exchangeRate).toFixed(2));
+
     const formattedLines = params.lines.map((line) => {
       const acc = this.chartOfAccounts.find((a) => a.id === line.accountId);
+      const foreignDebit = Number(line.foreignDebit ?? line.debit ?? 0);
+      const foreignCredit = Number(line.foreignCredit ?? line.credit ?? 0);
+      const functionalDebit = Number((foreignDebit * exchangeRate).toFixed(2));
+      const functionalCredit = Number((foreignCredit * exchangeRate).toFixed(2));
+
       return {
         accountId: line.accountId,
         accountCode: acc ? acc.code : 'UNKNOWN',
         accountName: acc ? acc.name : 'Unknown Account',
         description: line.description,
-        debit: Number(line.debit || 0),
-        credit: Number(line.credit || 0),
+        debit: functionalDebit,
+        credit: functionalCredit,
+        foreignDebit,
+        foreignCredit,
       };
     });
 
@@ -1002,14 +1079,20 @@ class ERPDatabase {
       reference: params.reference,
       memo: params.memo,
       status: 'Posted',
+      currency,
+      currencySymbol,
+      exchangeRate,
+      baseCurrency,
       totalDebit,
       totalCredit,
+      baseTotalDebit,
+      baseTotalCredit,
       lines: formattedLines,
       postedBy: params.postedBy,
       postedAt: new Date().toISOString(),
     };
 
-    // Update account balances atomically
+    // Update account balances atomically in base currency
     for (const l of formattedLines) {
       const acc = this.chartOfAccounts.find((a) => a.id === l.accountId);
       if (acc) {
@@ -1032,7 +1115,7 @@ class ERPDatabase {
       module: 'Accounting',
       entity: 'JournalEntry',
       entityId: entry.entryNumber,
-      newValue: `Balanced entry ৳${totalDebit.toLocaleString()} posted. Memo: ${params.memo}`,
+      newValue: `Balanced entry ${currencySymbol}${totalDebit.toLocaleString()} (Base ৳${baseTotalDebit.toLocaleString()} @ ${exchangeRate}) posted. Memo: ${params.memo}`,
       companyId: params.companyId,
     });
 
@@ -1119,9 +1202,18 @@ class ERPDatabase {
     items: { productId: string; quantity: number; unitPrice: number; taxRate: number }[];
     postedBy: string;
     companyId: string;
+    currency?: string;
+    currencySymbol?: string;
+    exchangeRate?: number;
+    baseCurrency?: string;
   }): { success: boolean; invoice?: SalesInvoice; error?: string } {
     const customer = this.customers.find((c) => c.id === params.customerId);
     if (!customer) return { success: false, error: 'Customer not found' };
+
+    const currency = params.currency || 'BDT';
+    const currencySymbol = params.currencySymbol || '৳';
+    const exchangeRate = Number(params.exchangeRate || 1);
+    const baseCurrency = params.baseCurrency || 'BDT';
 
     let subTotal = 0;
     let taxTotal = 0;
@@ -1135,8 +1227,8 @@ class ERPDatabase {
         return { success: false, error: `Insufficient inventory for SKU ${prod.sku}. On hand: ${prod.currentStock}, required: ${item.quantity}` };
       }
 
-      const lineTotal = item.quantity * item.unitPrice;
-      const taxLine = (lineTotal * item.taxRate) / 100;
+      const lineTotal = Number((item.quantity * item.unitPrice).toFixed(2));
+      const taxLine = Number(((lineTotal * item.taxRate) / 100).toFixed(2));
       subTotal += lineTotal;
       taxTotal += taxLine;
 
@@ -1175,33 +1267,36 @@ class ERPDatabase {
       });
     }
 
-    const grandTotal = subTotal + taxTotal;
+    const grandTotal = Number((subTotal + taxTotal).toFixed(2));
+    const baseSubTotal = Number((subTotal * exchangeRate).toFixed(2));
+    const baseTaxTotal = Number((taxTotal * exchangeRate).toFixed(2));
+    const baseGrandTotal = Number((grandTotal * exchangeRate).toFixed(2));
 
-    // Check credit limit
-    if (customer.currentReceivable + grandTotal > customer.creditLimit) {
-      // Allow but add warning or check
-    }
-
-    customer.currentReceivable += grandTotal;
+    // Update customer balance in functional base currency
+    customer.currentReceivable += baseGrandTotal;
 
     const invoiceNumber = `INV-2026-${String(this.salesInvoices.length + 1).padStart(4, '0')}`;
 
-    // Generate balanced double entry GL posting
+    // Generate balanced double entry GL posting in base functional currency
     const jvRes = this.postJournalEntry({
       reference: invoiceNumber,
-      memo: `Sales Invoiced to ${customer.name} - ${invoiceNumber}`,
+      memo: `Sales Invoiced to ${customer.name} - ${invoiceNumber} (${currencySymbol}${grandTotal.toLocaleString()} @ ${exchangeRate} ${baseCurrency}/${currency})`,
       companyId: params.companyId,
       postedBy: params.postedBy,
+      currency,
+      currencySymbol,
+      exchangeRate,
+      baseCurrency,
       lines: [
         {
           accountId: 'acc-1100', // Accounts Receivable (Debit)
-          description: `Trade Receivable from ${customer.name}`,
+          description: `Trade Receivable from ${customer.name} (${currencySymbol}${grandTotal.toLocaleString()})`,
           debit: grandTotal,
           credit: 0,
         },
         {
           accountId: 'acc-4010', // Sales Revenue (Credit)
-          description: `Sales revenue for ${invoiceNumber}`,
+          description: `Sales revenue for ${invoiceNumber} (${currencySymbol}${subTotal.toLocaleString()})`,
           debit: 0,
           credit: subTotal,
         },
@@ -1209,7 +1304,7 @@ class ERPDatabase {
           ? [
               {
                 accountId: 'acc-2100', // VAT Payable (Credit)
-                description: `NBR VAT Output on ${invoiceNumber}`,
+                description: `NBR VAT Output on ${invoiceNumber} (${currencySymbol}${taxTotal.toLocaleString()})`,
                 debit: 0,
                 credit: taxTotal,
               },
@@ -1227,9 +1322,16 @@ class ERPDatabase {
       invoiceDate: new Date().toISOString().split('T')[0],
       dueDate: new Date(Date.now() + customer.creditDays * 86400000).toISOString().split('T')[0],
       status: 'Posted',
+      currency,
+      currencySymbol,
+      exchangeRate,
+      baseCurrency,
       subTotal,
       taxTotal,
       grandTotal,
+      baseSubTotal,
+      baseTaxTotal,
+      baseGrandTotal,
       amountPaid: 0,
       balanceDue: grandTotal,
       journalEntryId: jvRes.entry?.id,
@@ -1246,7 +1348,7 @@ class ERPDatabase {
       module: 'Sales',
       entity: 'SalesInvoice',
       entityId: invoice.invoiceNumber,
-      newValue: `Customer: ${customer.name} | Total: ৳${grandTotal.toLocaleString()}`,
+      newValue: `Customer: ${customer.name} | Total: ${currencySymbol}${grandTotal.toLocaleString()} (Base: ৳${baseGrandTotal.toLocaleString()} @ ${exchangeRate})`,
       companyId: params.companyId,
     });
 

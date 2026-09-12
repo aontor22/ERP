@@ -291,7 +291,7 @@ apiRouter.get('/accounting/journals', (req: Request, res: Response) => {
 });
 
 apiRouter.post('/accounting/journals', (req: Request, res: Response) => {
-  const { reference, memo, lines } = req.body;
+  const { reference, memo, lines, currency, currencySymbol, exchangeRate, baseCurrency } = req.body;
   if (!memo || !Array.isArray(lines) || lines.length < 2) {
     return res.status(400).json({
       success: false,
@@ -305,6 +305,10 @@ apiRouter.post('/accounting/journals', (req: Request, res: Response) => {
     lines,
     postedBy: currentSession.name,
     companyId: currentSession.currentCompanyId,
+    currency,
+    currencySymbol,
+    exchangeRate,
+    baseCurrency,
   });
 
   if (!result.success) {
@@ -517,7 +521,7 @@ apiRouter.get('/sales/invoices', (req: Request, res: Response) => {
 });
 
 apiRouter.post('/sales/invoices', (req: Request, res: Response) => {
-  const { customerId, items } = req.body;
+  const { customerId, items, currency, currencySymbol, exchangeRate, baseCurrency } = req.body;
   if (!customerId || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ success: false, message: 'Invalid customer or invoice items' });
   }
@@ -527,6 +531,10 @@ apiRouter.post('/sales/invoices', (req: Request, res: Response) => {
     items,
     postedBy: currentSession.name,
     companyId: currentSession.currentCompanyId,
+    currency,
+    currencySymbol,
+    exchangeRate,
+    baseCurrency,
   });
 
   if (!result.success) {
@@ -794,4 +802,90 @@ apiRouter.put('/settings', (req: Request, res: Response) => {
     newValue: JSON.stringify(req.body),
   });
   res.json({ success: true, data: db.config });
+});
+
+// --- MULTI-CURRENCY & REAL-TIME EXCHANGE RATES ---
+const STATUTORY_BENCHMARKS_TO_BDT: Record<string, number> = {
+  BDT: 1.0,
+  USD: 121.5,
+  EUR: 132.8,
+  GBP: 158.4,
+  CNY: 17.1,
+  JPY: 0.81,
+  AED: 33.08,
+  INR: 1.45,
+  SGD: 93.4,
+  SAR: 32.38,
+};
+
+let ratesCache: { timestamp: number; base: string; data: any } | null = null;
+
+apiRouter.get('/exchange-rates', async (req: Request, res: Response) => {
+  const base = String(req.query.base || 'BDT').toUpperCase();
+  const now = Date.now();
+
+  // 60-second in-memory server cache
+  if (ratesCache && ratesCache.base === base && now - ratesCache.timestamp < 60000) {
+    return res.json({ success: true, data: ratesCache.data });
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+    const apiRes = await fetch(`https://open.er-api.com/v6/latest/${encodeURIComponent(base)}`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (apiRes.ok) {
+      const json = await apiRes.json();
+      if (json.result === 'success' && json.rates) {
+        const rates: Record<string, number> = json.rates;
+        const ratesToBase: Record<string, number> = {};
+
+        Object.keys(STATUTORY_BENCHMARKS_TO_BDT).forEach((curr) => {
+          if (rates[curr]) {
+            ratesToBase[curr] = 1 / rates[curr];
+          }
+        });
+
+        const data = {
+          base,
+          rates,
+          ratesToBase,
+          lastUpdated: new Date().toISOString(),
+          source: 'Open Exchange Rates (Live Web API)',
+          isLive: true,
+        };
+
+        ratesCache = { timestamp: now, base, data };
+        return res.json({ success: true, data });
+      }
+    }
+  } catch {
+    // Network failure or timeout: proceed to fallback
+  }
+
+  // Statutory Benchmark Fallback
+  const bdtRateOfBase = STATUTORY_BENCHMARKS_TO_BDT[base] || 1;
+  const rates: Record<string, number> = {};
+  const ratesToBase: Record<string, number> = {};
+
+  Object.entries(STATUTORY_BENCHMARKS_TO_BDT).forEach(([curr, bdtPerUnit]) => {
+    rates[curr] = Number((bdtRateOfBase / bdtPerUnit).toFixed(6));
+    ratesToBase[curr] = Number((bdtPerUnit / bdtRateOfBase).toFixed(6));
+  });
+
+  const fallbackData = {
+    base,
+    rates,
+    ratesToBase,
+    lastUpdated: new Date().toISOString(),
+    source: 'Bangladesh Bank / NBR Reference Statutory Rates',
+    isLive: false,
+  };
+
+  ratesCache = { timestamp: now, base, data: fallbackData };
+  res.json({ success: true, data: fallbackData });
 });

@@ -238,6 +238,15 @@ export interface SalesOrder {
   }[];
 }
 
+export interface CurrencyRate {
+  code: string;
+  name: string;
+  symbol: string;
+  rateToBase: number; // How many units of Base Currency per 1 unit of this currency
+  lastUpdated?: string;
+  source?: string;
+}
+
 export interface SalesInvoice {
   id: string;
   invoiceNumber: string; // e.g. INV-2026-0001
@@ -248,9 +257,16 @@ export interface SalesInvoice {
   invoiceDate: string;
   dueDate: string;
   status: 'Draft' | 'Posted' | 'Paid' | 'Partially Paid' | 'Overdue' | 'Void';
-  subTotal: number;
-  taxTotal: number;
-  grandTotal: number;
+  currency?: string; // Transaction Currency, e.g. "USD", "EUR", "BDT"
+  currencySymbol?: string;
+  exchangeRate?: number; // Conversion rate to functional base currency
+  baseCurrency?: string; // Functional reporting currency, e.g. "BDT"
+  subTotal: number; // In Transaction Currency
+  taxTotal: number; // In Transaction Currency
+  grandTotal: number; // In Transaction Currency
+  baseSubTotal?: number; // Converted into Base Functional Currency
+  baseTaxTotal?: number; // Converted into Base Functional Currency
+  baseGrandTotal?: number; // Converted into Base Functional Currency
   amountPaid: number;
   balanceDue: number;
   journalEntryId?: string;
@@ -281,8 +297,10 @@ export interface JournalLine {
   accountCode: string;
   accountName: string;
   description: string;
-  debit: number;
-  credit: number;
+  debit: number; // Functional base currency debit
+  credit: number; // Functional base currency credit
+  foreignDebit?: number; // Transaction currency debit
+  foreignCredit?: number; // Transaction currency credit
   costCenter?: string;
 }
 
@@ -294,8 +312,14 @@ export interface JournalEntry {
   reference: string;
   memo: string;
   status: 'Draft' | 'Posted' | 'Reversed';
-  totalDebit: number;
-  totalCredit: number;
+  currency?: string; // Transaction Currency
+  currencySymbol?: string;
+  exchangeRate?: number; // Rate to Base Currency
+  baseCurrency?: string;
+  totalDebit: number; // Transaction Currency total
+  totalCredit: number; // Transaction Currency total
+  baseTotalDebit?: number; // Functional Base Currency total
+  baseTotalCredit?: number; // Functional Base Currency total
   lines: JournalLine[];
   postedBy: string;
   postedAt?: string;
