@@ -20,6 +20,7 @@ import { AuditView } from './components/modules/AuditView.js';
 import { ReportsView } from './components/modules/ReportsView.js';
 import { SettingsView } from './components/modules/SettingsView.js';
 import { getInitialTheme, applyTheme, ThemeMode } from './lib/theme.js';
+import { getStoredBaseCurrency, saveStoredBaseCurrency } from './lib/currency.js';
 
 export default function App() {
   const [activeModule, setActiveModule] = useState<ActiveModule>('dashboard');
@@ -70,6 +71,12 @@ export default function App() {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>({});
+  const [baseCurrency, setBaseCurrency] = useState<string>(() => getStoredBaseCurrency());
+
+  const handleBaseCurrencyChange = (newBase: string) => {
+    setBaseCurrency(newBase);
+    saveStoredBaseCurrency(newBase);
+  };
 
   // Fetch all initial data
   const loadInitialData = useCallback(async () => {
@@ -384,6 +391,8 @@ export default function App() {
                 customers={customers}
                 products={products}
                 onCreateInvoice={handleCreateInvoice}
+                baseCurrency={baseCurrency}
+                onBaseCurrencyChange={handleBaseCurrencyChange}
               />
             )}
 
@@ -393,6 +402,8 @@ export default function App() {
                 journals={journals}
                 reports={accountingReports}
                 onCreateJournal={handleCreateJournal}
+                baseCurrency={baseCurrency}
+                onBaseCurrencyChange={handleBaseCurrencyChange}
               />
             )}
 
