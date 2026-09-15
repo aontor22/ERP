@@ -24,12 +24,14 @@ import { StatCard } from '../ui/StatCard.js';
 import { Badge } from '../ui/Badge.js';
 import { formatCurrency } from '../../lib/i18n.js';
 import { ActiveModule } from '../layout/Sidebar.js';
+import { BudgetAlertsWidget } from '../dashboard/BudgetAlertsWidget.js';
 
 interface DashboardViewProps {
   stats: any;
   products: any[];
   approvalRequests: any[];
   productionOrders: any[];
+  budgetAlerts?: any;
   onNavigate: (module: ActiveModule) => void;
   onQuickApprove: (requestId: string) => void;
 }
@@ -39,6 +41,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   products,
   approvalRequests,
   productionOrders,
+  budgetAlerts,
   onNavigate,
   onQuickApprove,
 }) => {
@@ -46,6 +49,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const lowStockItems = products.filter((p) => p.currentStock <= p.reorderLevel);
   const pendingApprovals = approvalRequests.filter((r) => r.status === 'Pending');
+  const activeBudgetAlerts = budgetAlerts || stats?.budgetAlerts;
 
   return (
     <div className="space-y-6">
@@ -138,6 +142,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           variant={pendingApprovals.length > 0 ? 'purple' : 'default'}
         />
       </div>
+
+      {/* Visual Alert & Expense Budget Monitoring Section */}
+      {activeBudgetAlerts && (
+        <BudgetAlertsWidget
+          budgetAlerts={activeBudgetAlerts}
+          onNavigate={onNavigate}
+        />
+      )}
 
       {/* Trends Graph & Pending Approvals */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

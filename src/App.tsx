@@ -71,6 +71,7 @@ export default function App() {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>({});
+  const [expenseBudgets, setExpenseBudgets] = useState<any>(null);
   const [baseCurrency, setBaseCurrency] = useState<string>(() => getStoredBaseCurrency());
 
   const handleBaseCurrencyChange = (newBase: string) => {
@@ -104,6 +105,7 @@ export default function App() {
         auditData,
         notifData,
         settingsData,
+        budgetsData,
       ] = await Promise.all([
         api.getMe(),
         api.getOrganizations(),
@@ -126,6 +128,7 @@ export default function App() {
         api.getAuditLogs(),
         api.getNotifications(),
         api.getSettings(),
+        api.getExpenseBudgets(),
       ]);
 
       setCurrentUser(meData);
@@ -153,6 +156,7 @@ export default function App() {
       setAuditLogs(auditData);
       setNotifications(notifData);
       setSettings(settingsData);
+      setExpenseBudgets(budgetsData);
     } catch (err) {
       console.error('Failed to load initial ERP data:', err);
     } finally {
@@ -181,6 +185,7 @@ export default function App() {
       approvalsData,
       auditData,
       notifData,
+      budgetsData,
     ] = await Promise.all([
       api.getDashboardStats(),
       api.getProducts(),
@@ -196,6 +201,7 @@ export default function App() {
       api.getApprovalRequests(),
       api.getAuditLogs(),
       api.getNotifications(),
+      api.getExpenseBudgets(),
     ]);
 
     setStats(statsData);
@@ -212,6 +218,7 @@ export default function App() {
     setApprovalRequests(approvalsData);
     setAuditLogs(auditData);
     setNotifications(notifData);
+    setExpenseBudgets(budgetsData);
   };
 
   // Actions
@@ -346,6 +353,7 @@ export default function App() {
                 products={products}
                 approvalRequests={approvalRequests}
                 productionOrders={productionOrders}
+                budgetAlerts={expenseBudgets || stats?.budgetAlerts}
                 onNavigate={setActiveModule}
                 onQuickApprove={handleQuickApprove}
               />
@@ -401,6 +409,15 @@ export default function App() {
                 accounts={accounts}
                 journals={journals}
                 reports={accountingReports}
+                budgets={expenseBudgets}
+                onRefreshBudgets={async () => {
+                  const [bData, sData] = await Promise.all([
+                    api.getExpenseBudgets(),
+                    api.getDashboardStats(),
+                  ]);
+                  setExpenseBudgets(bData);
+                  setStats(sData);
+                }}
                 onCreateJournal={handleCreateJournal}
                 baseCurrency={baseCurrency}
                 onBaseCurrencyChange={handleBaseCurrencyChange}

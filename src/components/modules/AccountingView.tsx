@@ -27,11 +27,14 @@ import {
   formatMultiCurrency,
   ExchangeRatesData,
 } from '../../lib/currency.js';
+import { ExpenseBudgetManager } from '../accounting/ExpenseBudgetManager.js';
 
 interface AccountingViewProps {
   accounts: Account[];
   journals: JournalEntry[];
   reports: any;
+  budgets?: any;
+  onRefreshBudgets?: () => void;
   onCreateJournal: (data: any) => Promise<void>;
   baseCurrency?: string;
   onBaseCurrencyChange?: (curr: string) => void;
@@ -41,11 +44,13 @@ export const AccountingView: React.FC<AccountingViewProps> = ({
   accounts,
   journals,
   reports,
+  budgets,
+  onRefreshBudgets,
   onCreateJournal,
   baseCurrency: propBaseCurrency,
   onBaseCurrencyChange: propOnBaseCurrencyChange,
 }) => {
-  const [activeTab, setActiveTab] = useState<'accounts' | 'journals' | 'trialBalance' | 'aging'>('accounts');
+  const [activeTab, setActiveTab] = useState<'accounts' | 'journals' | 'trialBalance' | 'aging' | 'budgets'>('accounts');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -416,6 +421,26 @@ export const AccountingView: React.FC<AccountingViewProps> = ({
           >
             AR / AP Aging Schedules
           </button>
+          <button
+            id="accounting-expense-budgets-tab"
+            onClick={() => setActiveTab('budgets')}
+            className={`px-4 py-3 text-xs font-semibold border-b-2 whitespace-nowrap transition-all shrink-0 flex items-center gap-1.5 ${
+              activeTab === 'budgets'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            <span>Expense Budgets & Monitoring</span>
+            {budgets?.exceededCount > 0 ? (
+              <span className="px-1.5 py-0.2 rounded-full text-3xs font-extrabold bg-rose-600 text-white animate-pulse">
+                {budgets.exceededCount} Exceeded
+              </span>
+            ) : budgets?.warningCount > 0 ? (
+              <span className="px-1.5 py-0.2 rounded-full text-3xs font-bold bg-amber-500 text-white">
+                {budgets.warningCount} Warn
+              </span>
+            ) : null}
+          </button>
         </div>
 
         {/* Currency Presentation Options for Accounts & Trial Balance */}
@@ -620,6 +645,15 @@ export const AccountingView: React.FC<AccountingViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === 'budgets' && (
+        <ExpenseBudgetManager
+          accounts={accounts}
+          initialBudgetsSummary={budgets}
+          baseCurrency={baseCurrency}
+          onBudgetUpdated={onRefreshBudgets}
+        />
       )}
 
       {/* Interactive Multi-Currency Journal Voucher Modal */}

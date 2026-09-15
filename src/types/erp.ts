@@ -326,6 +326,32 @@ export interface JournalEntry {
   reversalOfId?: string;
 }
 
+export interface ExpenseBudget {
+  id: string;
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  companyId: string;
+  month: number; // 1 - 12
+  year: number; // e.g. 2026
+  periodName: string; // e.g. "September 2026"
+  monthlyBudget: number; // in base functional currency
+  currency: string;
+  warningThresholdPercent: number; // e.g. 80 (%)
+  criticalThresholdPercent: number; // e.g. 100 (%)
+  notes?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export interface ExpenseBudgetSummary extends ExpenseBudget {
+  actualSpent: number;
+  remainingBudget: number;
+  percentageUsed: number;
+  status: 'Normal' | 'Warning' | 'Exceeded';
+  subCategory?: string;
+}
+
 export interface Employee {
   id: string;
   employeeCode: string; // e.g. EMP-001

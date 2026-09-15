@@ -6,6 +6,8 @@ import {
   Company,
   Customer,
   Employee,
+  ExpenseBudget,
+  ExpenseBudgetSummary,
   JournalEntry,
   PayrollRun,
   Product,
@@ -368,6 +370,149 @@ class ERPDatabase {
     // 6000 Operating Expenses
     { id: 'acc-6010', code: '6010', name: 'Administrative Salaries & Benefits', category: 'Expense', subCategory: 'General & Admin', companyId: 'comp-textile', balance: 4120000, isDebitNormal: true, isSystemAccount: true },
     { id: 'acc-6020', code: '6020', name: 'Factory Power, Gas & Utilities (DESCO/Titas)', category: 'Expense', subCategory: 'Operating Expenses', companyId: 'comp-textile', balance: 3100000, isDebitNormal: true, isSystemAccount: true },
+    { id: 'acc-6030', code: '6030', name: 'Factory Rent, Plant Repairs & Maintenance', category: 'Expense', subCategory: 'Operating Expenses', companyId: 'comp-textile', balance: 1450000, isDebitNormal: true, isSystemAccount: false },
+    { id: 'acc-6040', code: '6040', name: 'Freight, Logistics & Port Export Handling', category: 'Expense', subCategory: 'Operating Expenses', companyId: 'comp-textile', balance: 1200000, isDebitNormal: true, isSystemAccount: false },
+    { id: 'acc-6050', code: '6050', name: 'Marketing, Sampling & Buyer Commissions', category: 'Expense', subCategory: 'General & Admin', companyId: 'comp-textile', balance: 1250000, isDebitNormal: true, isSystemAccount: false },
+    { id: 'acc-6060', code: '6060', name: 'IT Infrastructure, Cloud ERP & Telecom', category: 'Expense', subCategory: 'General & Admin', companyId: 'comp-textile', balance: 650000, isDebitNormal: true, isSystemAccount: false },
+  ];
+
+  public expenseBudgets: ExpenseBudget[] = [
+    {
+      id: 'bgt-001',
+      accountId: 'acc-5010',
+      accountCode: '5010',
+      accountName: 'COGS - Direct Fabric & Yarn Consumed',
+      companyId: 'comp-textile',
+      month: 9,
+      year: 2026,
+      periodName: 'September 2026',
+      monthlyBudget: 30000000,
+      currency: 'BDT',
+      warningThresholdPercent: 80,
+      criticalThresholdPercent: 100,
+      notes: 'Knitting yarn consumption ceiling for Q3 export commitments',
+      updatedAt: '2026-09-01T08:00:00Z',
+      updatedBy: 'CFO Anwar Hossain',
+    },
+    {
+      id: 'bgt-002',
+      accountId: 'acc-5020',
+      accountCode: '5020',
+      accountName: 'COGS - Factory Direct Labor & Overtime',
+      companyId: 'comp-textile',
+      month: 9,
+      year: 2026,
+      periodName: 'September 2026',
+      monthlyBudget: 7500000,
+      currency: 'BDT',
+      warningThresholdPercent: 80,
+      criticalThresholdPercent: 100,
+      notes: 'Direct plant labor and peak shift allowance budget',
+      updatedAt: '2026-09-01T08:00:00Z',
+      updatedBy: 'CFO Anwar Hossain',
+    },
+    {
+      id: 'bgt-003',
+      accountId: 'acc-6010',
+      accountCode: '6010',
+      accountName: 'Administrative Salaries & Benefits',
+      companyId: 'comp-textile',
+      month: 9,
+      year: 2026,
+      periodName: 'September 2026',
+      monthlyBudget: 4500000,
+      currency: 'BDT',
+      warningThresholdPercent: 80,
+      criticalThresholdPercent: 100,
+      notes: 'Head office management and administrative staff payroll',
+      updatedAt: '2026-09-01T08:00:00Z',
+      updatedBy: 'HR Manager Nasreen Akter',
+    },
+    {
+      id: 'bgt-004',
+      accountId: 'acc-6020',
+      accountCode: '6020',
+      accountName: 'Factory Power, Gas & Utilities (DESCO/Titas)',
+      companyId: 'comp-textile',
+      month: 9,
+      year: 2026,
+      periodName: 'September 2026',
+      monthlyBudget: 2800000,
+      currency: 'BDT',
+      warningThresholdPercent: 80,
+      criticalThresholdPercent: 100,
+      notes: 'High-tension electricity substation and industrial boiler gas billing',
+      updatedAt: '2026-09-01T08:00:00Z',
+      updatedBy: 'CFO Anwar Hossain',
+    },
+    {
+      id: 'bgt-005',
+      accountId: 'acc-6030',
+      accountCode: '6030',
+      accountName: 'Factory Rent, Plant Repairs & Maintenance',
+      companyId: 'comp-textile',
+      month: 9,
+      year: 2026,
+      periodName: 'September 2026',
+      monthlyBudget: 2000000,
+      currency: 'BDT',
+      warningThresholdPercent: 80,
+      criticalThresholdPercent: 100,
+      notes: 'Preventative CNC maintenance and warehouse lease buffer',
+      updatedAt: '2026-09-01T08:00:00Z',
+      updatedBy: 'Operations Director',
+    },
+    {
+      id: 'bgt-006',
+      accountId: 'acc-6040',
+      accountCode: '6040',
+      accountName: 'Freight, Logistics & Port Export Handling',
+      companyId: 'comp-textile',
+      month: 9,
+      year: 2026,
+      periodName: 'September 2026',
+      monthlyBudget: 1800000,
+      currency: 'BDT',
+      warningThresholdPercent: 80,
+      criticalThresholdPercent: 100,
+      notes: 'Covered van transport Gazipur to Chittagong CFS terminal',
+      updatedAt: '2026-09-01T08:00:00Z',
+      updatedBy: 'Logistics Lead',
+    },
+    {
+      id: 'bgt-007',
+      accountId: 'acc-6050',
+      accountCode: '6050',
+      accountName: 'Marketing, Sampling & Buyer Commissions',
+      companyId: 'comp-textile',
+      month: 9,
+      year: 2026,
+      periodName: 'September 2026',
+      monthlyBudget: 1200000,
+      currency: 'BDT',
+      warningThresholdPercent: 80,
+      criticalThresholdPercent: 100,
+      notes: 'European apparel showroom samples and merchandising fee',
+      updatedAt: '2026-09-01T08:00:00Z',
+      updatedBy: 'Sales Director Tariqul',
+    },
+    {
+      id: 'bgt-008',
+      accountId: 'acc-6060',
+      accountCode: '6060',
+      accountName: 'IT Infrastructure, Cloud ERP & Telecom',
+      companyId: 'comp-textile',
+      month: 9,
+      year: 2026,
+      periodName: 'September 2026',
+      monthlyBudget: 800000,
+      currency: 'BDT',
+      warningThresholdPercent: 80,
+      criticalThresholdPercent: 100,
+      notes: 'Dedicated fiber link, ERP server compute, and terminal scanners',
+      updatedAt: '2026-09-01T08:00:00Z',
+      updatedBy: 'IT Manager',
+    },
   ];
 
   public journalEntries: JournalEntry[] = [
@@ -1418,6 +1563,154 @@ class ERPDatabase {
     if (this.auditLogs.length > 200) {
       this.auditLogs.pop();
     }
+  }
+
+  // Expense Budget Monitoring against live GL account balances
+  public getExpenseBudgetsSummary(month = 9, year = 2026, companyId = 'comp-textile'): {
+    budgets: ExpenseBudgetSummary[];
+    totalBudgeted: number;
+    totalSpent: number;
+    exceededCount: number;
+    warningCount: number;
+    normalCount: number;
+    overallPercentageUsed: number;
+  } {
+    const relevantBudgets = this.expenseBudgets.filter(
+      (b) => b.companyId === companyId && b.month === month && b.year === year
+    );
+
+    const summaries: ExpenseBudgetSummary[] = relevantBudgets.map((b) => {
+      const account = this.chartOfAccounts.find((a) => a.id === b.accountId);
+      const actualSpent = account ? Math.max(0, account.balance) : 0;
+      const remainingBudget = b.monthlyBudget - actualSpent;
+      const percentageUsed = b.monthlyBudget > 0 ? Number(((actualSpent / b.monthlyBudget) * 100).toFixed(1)) : 0;
+
+      let status: 'Normal' | 'Warning' | 'Exceeded' = 'Normal';
+      if (percentageUsed >= (b.criticalThresholdPercent || 100)) {
+        status = 'Exceeded';
+      } else if (percentageUsed >= (b.warningThresholdPercent || 80)) {
+        status = 'Warning';
+      }
+
+      return {
+        ...b,
+        accountName: account ? account.name : b.accountName,
+        accountCode: account ? account.code : b.accountCode,
+        subCategory: account?.subCategory || 'Operating Expense',
+        actualSpent,
+        remainingBudget,
+        percentageUsed,
+        status,
+      };
+    });
+
+    summaries.sort((a, b) => {
+      const score = (s: string) => (s === 'Exceeded' ? 3 : s === 'Warning' ? 2 : 1);
+      if (score(b.status) !== score(a.status)) {
+        return score(b.status) - score(a.status);
+      }
+      return b.percentageUsed - a.percentageUsed;
+    });
+
+    const totalBudgeted = summaries.reduce((sum, s) => sum + s.monthlyBudget, 0);
+    const totalSpent = summaries.reduce((sum, s) => sum + s.actualSpent, 0);
+    const exceededCount = summaries.filter((s) => s.status === 'Exceeded').length;
+    const warningCount = summaries.filter((s) => s.status === 'Warning').length;
+    const normalCount = summaries.filter((s) => s.status === 'Normal').length;
+    const overallPercentageUsed = totalBudgeted > 0 ? Number(((totalSpent / totalBudgeted) * 100).toFixed(1)) : 0;
+
+    return {
+      budgets: summaries,
+      totalBudgeted,
+      totalSpent,
+      exceededCount,
+      warningCount,
+      normalCount,
+      overallPercentageUsed,
+    };
+  }
+
+  public saveExpenseBudget(params: {
+    accountId: string;
+    monthlyBudget: number;
+    month?: number;
+    year?: number;
+    warningThresholdPercent?: number;
+    criticalThresholdPercent?: number;
+    notes?: string;
+    user: string;
+    userRole: string;
+    companyId: string;
+  }): { success: boolean; budget?: ExpenseBudget; error?: string } {
+    const account = this.chartOfAccounts.find((a) => a.id === params.accountId);
+    if (!account) {
+      return { success: false, error: 'Account not found in Chart of Accounts.' };
+    }
+    if (account.category !== 'Expense') {
+      return { success: false, error: 'Budgets can only be assigned to Expense accounts.' };
+    }
+    if (!Number.isFinite(params.monthlyBudget) || params.monthlyBudget <= 0) {
+      return { success: false, error: 'Monthly budget must be a positive number.' };
+    }
+
+    const month = params.month ?? 9;
+    const year = params.year ?? 2026;
+    const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const periodName = `${monthNames[month] || 'Month'} ${year}`;
+
+    const existingIndex = this.expenseBudgets.findIndex(
+      (b) => b.accountId === params.accountId && b.month === month && b.year === year && b.companyId === params.companyId
+    );
+
+    const now = new Date().toISOString();
+    let updated: ExpenseBudget;
+
+    if (existingIndex >= 0) {
+      const old = this.expenseBudgets[existingIndex];
+      updated = {
+        ...old,
+        monthlyBudget: params.monthlyBudget,
+        warningThresholdPercent: params.warningThresholdPercent ?? old.warningThresholdPercent ?? 80,
+        criticalThresholdPercent: params.criticalThresholdPercent ?? old.criticalThresholdPercent ?? 100,
+        notes: params.notes ?? old.notes,
+        updatedAt: now,
+        updatedBy: `${params.user} (${params.userRole})`,
+      };
+      this.expenseBudgets[existingIndex] = updated;
+    } else {
+      updated = {
+        id: `bgt-${Date.now()}`,
+        accountId: account.id,
+        accountCode: account.code,
+        accountName: account.name,
+        companyId: params.companyId,
+        month,
+        year,
+        periodName,
+        monthlyBudget: params.monthlyBudget,
+        currency: 'BDT',
+        warningThresholdPercent: params.warningThresholdPercent ?? 80,
+        criticalThresholdPercent: params.criticalThresholdPercent ?? 100,
+        notes: params.notes || '',
+        updatedAt: now,
+        updatedBy: `${params.user} (${params.userRole})`,
+      };
+      this.expenseBudgets.push(updated);
+    }
+
+    this.addAuditLog({
+      user: params.user,
+      userRole: params.userRole as any,
+      ipAddress: '127.0.0.1',
+      action: existingIndex >= 0 ? 'Updated Expense Budget' : 'Created Expense Budget',
+      module: 'Accounting',
+      entity: 'ExpenseBudget',
+      entityId: account.code,
+      newValue: `${account.name}: Budget ৳${params.monthlyBudget.toLocaleString()} (${periodName})`,
+      companyId: params.companyId,
+    });
+
+    return { success: true, budget: updated };
   }
 }
 

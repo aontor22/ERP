@@ -45,6 +45,22 @@ export const api = {
   createJournal: (data: { reference?: string; memo: string; lines: any[] }) =>
     fetchApi<any>('/api/v1/accounting/journals', { method: 'POST', body: JSON.stringify(data) }),
   getAccountingReports: () => fetchApi<any>('/api/v1/accounting/reports'),
+  getExpenseBudgets: (month?: number, year?: number) => {
+    const params = new URLSearchParams();
+    if (month) params.append('month', String(month));
+    if (year) params.append('year', String(year));
+    const qs = params.toString();
+    return fetchApi<any>(`/api/v1/accounting/budgets${qs ? `?${qs}` : ''}`);
+  },
+  saveExpenseBudget: (data: {
+    accountId: string;
+    monthlyBudget: number;
+    warningThresholdPercent?: number;
+    criticalThresholdPercent?: number;
+    notes?: string;
+    month?: number;
+    year?: number;
+  }) => fetchApi<any>('/api/v1/accounting/budgets', { method: 'POST', body: JSON.stringify(data) }),
 
   // Procurement
   getPurchaseOrders: () => fetchApi<any[]>('/api/v1/procurement/orders'),
@@ -91,4 +107,7 @@ export const api = {
   // Multi-Currency & Real-Time Exchange Rates
   getExchangeRates: (base?: string) =>
     fetchApi<any>(`/api/v1/exchange-rates${base ? `?base=${encodeURIComponent(base)}` : ''}`),
+
+  // Security & Compliance Telemetry
+  getSecurityStatus: () => fetchApi<any>('/api/v1/security/status'),
 };
