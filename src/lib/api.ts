@@ -1,3 +1,5 @@
+import { InventoryForecastSummary } from '../types/erp.js';
+
 // API Client for ApexERP
 
 export async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -38,6 +40,21 @@ export const api = {
   getStockLedger: () => fetchApi<any[]>('/api/v1/inventory/ledger'),
   adjustStock: (data: { productId: string; warehouseId: string; quantityChange: number; reason: string }) =>
     fetchApi<any>('/api/v1/inventory/adjust', { method: 'POST', body: JSON.stringify(data) }),
+  getInventoryForecast: (params?: { serviceLevel?: number; demandSurge?: number; leadTimeBuffer?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.serviceLevel) q.append('serviceLevel', String(params.serviceLevel));
+    if (params?.demandSurge !== undefined) q.append('demandSurge', String(params.demandSurge));
+    if (params?.leadTimeBuffer !== undefined) q.append('leadTimeBuffer', String(params.leadTimeBuffer));
+    const qs = q.toString();
+    return fetchApi<InventoryForecastSummary>(`/api/v1/inventory/forecast${qs ? `?${qs}` : ''}`);
+  },
+  applyInventoryForecast: (data: {
+    productId: string;
+    suggestedReorderPoint: number;
+    suggestedReorderQuantity: number;
+  }) => fetchApi<any>('/api/v1/inventory/forecast/apply', { method: 'POST', body: JSON.stringify(data) }),
+  createReplenishmentPO: (data: { productId: string; quantity: number }) =>
+    fetchApi<any>('/api/v1/inventory/forecast/create-po', { method: 'POST', body: JSON.stringify(data) }),
 
   // Accounting
   getAccounts: () => fetchApi<any[]>('/api/v1/accounting/accounts'),

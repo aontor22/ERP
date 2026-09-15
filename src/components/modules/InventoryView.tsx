@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
-import { Boxes, Plus, History, ArrowDownRight, ArrowUpRight, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Boxes, Plus, History, ArrowDownRight, ArrowUpRight, AlertTriangle, ShieldCheck, Sparkles } from 'lucide-react';
 import { Product, StockLedgerEntry } from '../../types/erp.js';
 import { DataTable, Column } from '../ui/DataTable.js';
 import { Badge } from '../ui/Badge.js';
 import { Modal } from '../ui/Modal.js';
 import { formatCurrency, formatDate } from '../../lib/i18n.js';
+import { InventoryForecastingModule } from './inventory/InventoryForecastingModule.js';
 
 interface InventoryViewProps {
   products: Product[];
   stockLedger: StockLedgerEntry[];
   warehouses: any[];
   onAdjustStock: (data: { productId: string; warehouseId: string; quantityChange: number; reason: string }) => Promise<void>;
+  onRefreshProducts?: () => void;
+  onNavigateToProcurement?: () => void;
 }
 
 export const InventoryView: React.FC<InventoryViewProps> = ({
@@ -18,14 +21,19 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   stockLedger,
   warehouses,
   onAdjustStock,
+  onRefreshProducts,
+  onNavigateToProcurement,
 }) => {
-  const [activeTab, setActiveTab] = useState<'balances' | 'ledger'>('balances');
+  const [activeTab, setActiveTab] = useState<'balances' | 'forecast' | 'ledger'>('balances');
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(products[0]?.id || '');
   const [selectedWarehouse, setSelectedWarehouse] = useState(warehouses[0]?.id || '');
   const [quantityChange, setQuantityChange] = useState<number>(0);
   const [adjustmentReason, setAdjustmentReason] = useState('Cycle count physical inventory variance');
   const [loading, setLoading] = useState(false);
+
+  // Count items below reorder point
+  const itemsBelowReorder = products.filter((p) => p.currentStock <= p.reorderLevel).length;
 
   // Balances Table Columns
   const balanceColumns: Column<Product>[] = [
@@ -35,7 +43,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       sortable: true,
       render: (p) => (
         <div>
-          <span className="font-mono font-bold text-blue-700">{p.sku}</span>
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono font-bold text-blue-700">{p.sku}</span>
+            {p.currentStock <= p.reorderLevel && (
+              <span className="inline-flex items-center px-1.5 py-0.2 rounded text-3xs font-bold bg-rose-100 text-rose-800">
+                LOW STOCK
+              </span>
+            )}
+          </div>
           <p className="font-semibold text-slate-900">{p.name}</p>
         </div>
       ),
@@ -46,7 +61,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       render: (p) => (
         <div>
           <span className="text-slate-800">{p.category}</span>
-          <p className="text-2xs text-slate-400">Unit: {p.unit}</p>
+          <p className="text-2xs text-slate-400">
+            Unit: {p.unit} • Lead Time: {p.leadTimeDays || 14}d
+          </p>
         </div>
       ),
     },
@@ -64,14 +81,22 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     },
     {
       key: 'currentStock',
-      header: 'On Hand Qty',
+      header: 'On Hand / ROP',
       align: 'right',
       sortable: true,
-      render: (p) => (
-        <span className="font-mono font-bold text-slate-900">
-          {p.currentStock.toLocaleString()} {p.unit}
-        </span>
-      ),
+      render: (p) => {
+        const isBelow = p.currentStock <= p.reorderLevel;
+        return (
+          <div>
+            <span className={`font-mono font-bold ${isBelow ? 'text-rose-600' : 'text-slate-900'}`}>
+              {p.currentStock.toLocaleString()} {p.unit}
+            </span>
+            <p className="text-3xs text-slate-400 font-mono">
+              ROP: {p.reorderLevel} | Max: {p.maxStock}
+            </p>
+          </div>
+        );
+      },
     },
     {
       key: 'totalStockValue',
@@ -89,15 +114,25 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       header: 'Actions',
       align: 'center',
       render: (p) => (
-        <button
-          onClick={() => {
-            setSelectedProduct(p.id);
-            setIsAdjustModalOpen(true);
-          }}
-          className="px-2.5 py-1 text-2xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 transition-colors"
-        >
-          Adjust Stock
-        </button>
+        <div className="flex items-center justify-center gap-1.5">
+          <button
+            onClick={() => {
+              setSelectedProduct(p.id);
+              setIsAdjustModalOpen(true);
+            }}
+            className="px-2 py-1 text-2xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 transition-colors"
+          >
+            Adjust
+          </button>
+          <button
+            onClick={() => setActiveTab('forecast')}
+            className="px-2 py-1 text-2xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded hover:bg-indigo-100 transition-colors flex items-center gap-1"
+            title="View AI replenishment forecast for this item"
+          >
+            <Sparkles className="w-2.5 h-2.5" />
+            Forecast
+          </button>
+        </div>
       ),
     },
   ];
@@ -245,6 +280,22 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           Warehouse Stock Balances ({products.length})
         </button>
         <button
+          onClick={() => setActiveTab('forecast')}
+          className={`px-4 py-3 text-xs font-semibold border-b-2 transition-all shrink-0 flex items-center gap-1.5 ${
+            activeTab === 'forecast'
+              ? 'border-indigo-600 text-indigo-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+          AI Inventory Forecasting & Replenishment
+          {itemsBelowReorder > 0 && (
+            <span className="ml-1 px-1.5 py-0.2 rounded-full text-3xs font-bold bg-rose-100 text-rose-700">
+              {itemsBelowReorder} at risk
+            </span>
+          )}
+        </button>
+        <button
           onClick={() => setActiveTab('ledger')}
           className={`px-4 py-3 text-xs font-semibold border-b-2 transition-all shrink-0 ${
             activeTab === 'ledger'
@@ -263,6 +314,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           columns={balanceColumns}
           searchPlaceholder="Search on-hand stock balances..."
           exportFilename="inventory-valuation-balances.csv"
+        />
+      ) : activeTab === 'forecast' ? (
+        <InventoryForecastingModule
+          onRefreshProducts={onRefreshProducts}
+          onNavigateToProcurement={onNavigateToProcurement}
         />
       ) : (
         <DataTable

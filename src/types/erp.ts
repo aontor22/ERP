@@ -126,6 +126,9 @@ export interface Product {
   totalStockValue: number;
   companyId: string;
   warehouseAllocations: { warehouseId: string; warehouseName: string; quantity: number }[];
+  leadTimeDays?: number;
+  supplierId?: string;
+  supplierName?: string;
 }
 
 export interface StockLedgerEntry {
@@ -500,3 +503,85 @@ export interface SystemConfig {
   enableStrictNegativeStockBlock: boolean;
   approvalThresholdPO: number;
 }
+
+export interface HistoricalMonthlyTrend {
+  month: string;
+  fullMonth: string;
+  revenue: number;
+  expenses: number;
+  profit: number;
+  salesGrowth: number;
+  procurementVolume: number;
+  procurementUnits: number;
+  ordersCount: number;
+}
+
+export type StockoutRiskLevel = 'CRITICAL' | 'REORDER_NOW' | 'MODERATE' | 'OPTIMAL' | 'OVERSTOCKED';
+
+export interface InventoryForecastItem {
+  productId: string;
+  sku: string;
+  name: string;
+  category: string;
+  type: ItemType;
+  unit: string;
+  currentStock: number;
+  costPrice: number;
+  sellingPrice: number;
+
+  // Historical Sales & Consumption Analysis
+  avgDailyDemand: number;
+  demandStdDev: number;
+  monthlyRunRate: number;
+  salesGrowthTrendPercent: number;
+
+  // Lead Time Analysis
+  supplierLeadTimeDays: number;
+  leadTimeVarianceDays: number;
+  preferredSupplierId?: string;
+  preferredSupplierName?: string;
+
+  // Statistical & AI Parameters
+  serviceLevelZ: number;
+  safetyStock: number;
+  leadTimeDemand: number;
+  suggestedReorderPoint: number;
+  currentReorderLevel: number;
+  reorderPointDelta: number;
+
+  // Suggested Reorder Quantity (EOQ)
+  suggestedReorderQuantity: number;
+  currentMaxStock: number;
+  estimatedReorderCost: number;
+
+  // Stockout Risk & Velocity
+  daysOfInventoryRemaining: number;
+  stockoutRiskLevel: StockoutRiskLevel;
+  stockoutWithinLeadTime: boolean;
+  estimatedStockoutDate: string;
+
+  // AI Strategic Insights
+  aiRationale: string;
+  aiActionRecommendation: string;
+}
+
+export interface InventoryForecastSummary {
+  totalSkusAnalyzed: number;
+  criticalStockoutCount: number;
+  reorderRecommendedCount: number;
+  optimalCount: number;
+  overstockedCount: number;
+  totalRecommendedReplenishmentValue: number;
+  potentialStockoutRevenueAtRisk: number;
+  avgLeadTimeDays: number;
+  systemServiceLevel: number;
+  scenarioParameters: {
+    serviceLevelPercent: number;
+    demandSurgePercent: number;
+    leadTimeBufferDays: number;
+  };
+  aiExecutiveSummary: string;
+  lastForecastGeneratedAt: string;
+  items: InventoryForecastItem[];
+}
+

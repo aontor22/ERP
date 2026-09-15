@@ -11,20 +11,12 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-} from 'recharts';
 import { StatCard } from '../ui/StatCard.js';
 import { Badge } from '../ui/Badge.js';
 import { formatCurrency } from '../../lib/i18n.js';
 import { ActiveModule } from '../layout/Sidebar.js';
 import { BudgetAlertsWidget } from '../dashboard/BudgetAlertsWidget.js';
+import { HistoricalTrendsChart } from '../dashboard/HistoricalTrendsChart.js';
 
 interface DashboardViewProps {
   stats: any;
@@ -153,52 +145,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Trends Graph & Pending Approvals */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Revenue & Profit Trends Chart */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-5 shadow-2xs">
-          <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 tracking-tight">
-                Financial Performance Trajectory
-              </h3>
-              <p className="text-2xs text-slate-500">
-                Monthly revenue vs. operating expenses (BDT in Millions)
-              </p>
-            </div>
-            <span className="text-2xs font-semibold px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded">
-              Audited Books
-            </span>
-          </div>
-
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.monthlyTrends || []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0} />
-                  </linearGradient>
-                  <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                <YAxis
-                  stroke="#94a3b8"
-                  fontSize={11}
-                  tickLine={false}
-                  tickFormatter={(val) => `৳${(val / 1000000).toFixed(0)}M`}
-                />
-                <Tooltip
-                  formatter={(val: any) => [formatCurrency(Number(val)), '']}
-                  contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
-                />
-                <Area type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={2} fillOpacity={1} fill="url(#colorRev)" name="Revenue" />
-                <Area type="monotone" dataKey="expenses" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorExp)" name="Expenses" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+        {/* Recharts 12-Month Historical Trends (Revenue, Sales Growth & Procurement Volume) */}
+        <div className="lg:col-span-2">
+          <HistoricalTrendsChart data={stats.monthlyTrends || []} />
         </div>
 
         {/* Pending Workflow Approvals widget */}

@@ -1,8 +1,25 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import { GoogleGenAI } from '@google/genai';
 import { db } from './erpDatabase.js';
 import { SystemConfig } from '../types/erp.js';
 
 export const apiRouter = Router();
+
+// Lazy initialization of Gemini AI client (fails gracefully if GEMINI_API_KEY is not configured)
+let genAIClient: GoogleGenAI | null = null;
+function getGenAI(): GoogleGenAI | null {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  if (!genAIClient) {
+    try {
+      genAIClient = new GoogleGenAI({ apiKey });
+    } catch (e) {
+      console.error('Failed to instantiate GoogleGenAI:', e);
+      return null;
+    }
+  }
+  return genAIClient;
+}
 
 // Permitted System Roles
 export const ALLOWED_ROLES = [
@@ -234,12 +251,138 @@ apiRouter.get('/dashboard/stats', (req: Request, res: Response) => {
         allBudgets: budgetSummary.budgets,
       },
       monthlyTrends: [
-        { month: 'Apr', revenue: 42000000, expenses: 29500000, profit: 12500000 },
-        { month: 'May', revenue: 48500000, expenses: 33100000, profit: 15400000 },
-        { month: 'Jun', revenue: 54000000, expenses: 36800000, profit: 17200000 },
-        { month: 'Jul', revenue: 61000000, expenses: 41200000, profit: 19800000 },
-        { month: 'Aug', revenue: 68500000, expenses: 44900000, profit: 23600000 },
-        { month: 'Sep', revenue: totalRevenue, expenses: totalExpenses, profit: netProfit },
+        {
+          month: "Oct '25",
+          fullMonth: 'October 2025',
+          revenue: 38200000,
+          expenses: 26500000,
+          profit: 11700000,
+          salesGrowth: 4.2,
+          procurementVolume: 24500000,
+          procurementUnits: 42000,
+          ordersCount: 28,
+        },
+        {
+          month: "Nov '25",
+          fullMonth: 'November 2025',
+          revenue: 41000000,
+          expenses: 28000000,
+          profit: 13000000,
+          salesGrowth: 7.3,
+          procurementVolume: 26200000,
+          procurementUnits: 45500,
+          ordersCount: 31,
+        },
+        {
+          month: "Dec '25",
+          fullMonth: 'December 2025',
+          revenue: 44500000,
+          expenses: 30200000,
+          profit: 14300000,
+          salesGrowth: 8.5,
+          procurementVolume: 29000000,
+          procurementUnits: 51000,
+          ordersCount: 36,
+        },
+        {
+          month: "Jan '26",
+          fullMonth: 'January 2026',
+          revenue: 43000000,
+          expenses: 29800000,
+          profit: 13200000,
+          salesGrowth: -3.4,
+          procurementVolume: 27500000,
+          procurementUnits: 48000,
+          ordersCount: 33,
+        },
+        {
+          month: "Feb '26",
+          fullMonth: 'February 2026',
+          revenue: 46800000,
+          expenses: 31500000,
+          profit: 15300000,
+          salesGrowth: 8.8,
+          procurementVolume: 30400000,
+          procurementUnits: 53200,
+          ordersCount: 37,
+        },
+        {
+          month: "Mar '26",
+          fullMonth: 'March 2026',
+          revenue: 51200000,
+          expenses: 34000000,
+          profit: 17200000,
+          salesGrowth: 9.4,
+          procurementVolume: 33800000,
+          procurementUnits: 59000,
+          ordersCount: 42,
+        },
+        {
+          month: "Apr '26",
+          fullMonth: 'April 2026',
+          revenue: 54500000,
+          expenses: 36200000,
+          profit: 18300000,
+          salesGrowth: 6.4,
+          procurementVolume: 35600000,
+          procurementUnits: 62500,
+          ordersCount: 45,
+        },
+        {
+          month: "May '26",
+          fullMonth: 'May 2026',
+          revenue: 58000000,
+          expenses: 38500000,
+          profit: 19500000,
+          salesGrowth: 6.4,
+          procurementVolume: 38000000,
+          procurementUnits: 66000,
+          ordersCount: 48,
+        },
+        {
+          month: "Jun '26",
+          fullMonth: 'June 2026',
+          revenue: 63200000,
+          expenses: 41800000,
+          profit: 21400000,
+          salesGrowth: 9.0,
+          procurementVolume: 41200000,
+          procurementUnits: 71500,
+          ordersCount: 53,
+        },
+        {
+          month: "Jul '26",
+          fullMonth: 'July 2026',
+          revenue: 67500000,
+          expenses: 44200000,
+          profit: 23300000,
+          salesGrowth: 6.8,
+          procurementVolume: 43500000,
+          procurementUnits: 76000,
+          ordersCount: 57,
+        },
+        {
+          month: "Aug '26",
+          fullMonth: 'August 2026',
+          revenue: 72800000,
+          expenses: 47600000,
+          profit: 25200000,
+          salesGrowth: 7.9,
+          procurementVolume: 46800000,
+          procurementUnits: 81000,
+          ordersCount: 62,
+        },
+        {
+          month: "Sep '26",
+          fullMonth: 'September 2026',
+          revenue: totalRevenue,
+          expenses: totalExpenses,
+          profit: netProfit,
+          salesGrowth: Number((((totalRevenue - 72800000) / 72800000) * 100).toFixed(1)),
+          procurementVolume: 49200000,
+          procurementUnits: 85500,
+          ordersCount: 68,
+        },
       ],
     },
   });
@@ -392,6 +535,125 @@ apiRouter.post(
       return res.status(400).json(result);
     }
     res.json({ success: true, message: 'Stock successfully adjusted and posted to ledger' });
+  }
+);
+
+// --- AI-DRIVEN INVENTORY FORECASTING & REPLENISHMENT ---
+apiRouter.get('/inventory/forecast', async (req: Request, res: Response) => {
+  try {
+    const serviceLevelPercent = req.query.serviceLevel ? Math.min(99.9, Math.max(80, Number(req.query.serviceLevel))) : 95;
+    const demandSurgePercent = req.query.demandSurge ? Math.min(100, Math.max(-50, Number(req.query.demandSurge))) : 0;
+    const leadTimeBufferDays = req.query.leadTimeBuffer ? Math.min(30, Math.max(0, Number(req.query.leadTimeBuffer))) : 0;
+
+    const summary = db.generateInventoryForecast({
+      companyId: currentSession.currentCompanyId,
+      serviceLevelPercent,
+      demandSurgePercent,
+      leadTimeBufferDays,
+    });
+
+    // Augment with Gemini AI executive narrative when GEMINI_API_KEY is present
+    const ai = getGenAI();
+    if (ai) {
+      try {
+        const criticalItems = summary.items
+          .filter((i) => i.stockoutRiskLevel === 'CRITICAL' || i.stockoutRiskLevel === 'REORDER_NOW')
+          .map(
+            (i) =>
+              `- SKU ${i.sku} (${i.name}): On-hand ${i.currentStock} ${i.unit}, Daily Demand ${i.avgDailyDemand} ${i.unit}/day, Days to stockout: ${i.daysOfInventoryRemaining}d, Supplier Lead Time: ${i.supplierLeadTimeDays}d, Suggested ROP: ${i.suggestedReorderPoint}, Suggested EOQ: ${i.suggestedReorderQuantity}`
+          )
+          .join('\n');
+
+        const prompt = `You are the AI Chief Supply Chain Officer for Apex Enterprise ERP. Analyze this inventory forecast:
+- Target Service Level: ${summary.systemServiceLevel}%
+- Demand Surge Scenario: ${summary.scenarioParameters.demandSurgePercent >= 0 ? '+' : ''}${summary.scenarioParameters.demandSurgePercent}%
+- Sourcing Buffer: +${summary.scenarioParameters.leadTimeBufferDays} days
+- Monitored SKUs: ${summary.totalSkusAnalyzed}
+- Critical Stockouts (< Lead Time): ${summary.criticalStockoutCount}
+- Reorder Triggers: ${summary.reorderRecommendedCount}
+- Total Replenishment Investment: ৳${summary.totalRecommendedReplenishmentValue.toLocaleString()} BDT
+- Revenue at Risk: ৳${summary.potentialStockoutRevenueAtRisk.toLocaleString()} BDT
+
+High-Risk SKUs:
+${criticalItems || 'All SKUs currently within safe operating thresholds'}
+
+Provide an executive supply chain briefing (strictly under 75 words) focusing on immediate stockout risks, lead time buffer justification, and recommended purchase order approvals. Be objective and professional.`;
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: prompt,
+        });
+
+        if (response.text) {
+          summary.aiExecutiveSummary = response.text.trim();
+        }
+      } catch (geminiErr) {
+        console.warn('Gemini AI enrichment skipped, using built-in algorithmic supply chain audit:', geminiErr);
+      }
+    }
+
+    res.json({ success: true, data: summary });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to generate inventory forecast' });
+  }
+});
+
+apiRouter.post(
+  '/inventory/forecast/apply',
+  requireRoles(['Super Admin', 'CEO', 'CFO', 'Warehouse Manager', 'Inventory Officer', 'Production Manager']),
+  (req: Request, res: Response) => {
+    const { productId, suggestedReorderPoint, suggestedReorderQuantity } = req.body;
+    if (!productId || suggestedReorderPoint === undefined || suggestedReorderQuantity === undefined) {
+      return res.status(400).json({ success: false, message: 'Missing product ID or suggested reorder parameters' });
+    }
+
+    const result = db.applyInventoryForecast({
+      productId,
+      suggestedReorderPoint: Number(suggestedReorderPoint),
+      suggestedReorderQuantity: Number(suggestedReorderQuantity),
+      user: currentSession.name,
+      userRole: currentSession.role,
+      companyId: currentSession.currentCompanyId,
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    res.json({
+      success: true,
+      data: result.product,
+      message: `Successfully applied AI reorder point (${result.product?.reorderLevel}) and max capacity (${result.product?.maxStock}) to product master.`,
+    });
+  }
+);
+
+apiRouter.post(
+  '/inventory/forecast/create-po',
+  requireRoles(['Super Admin', 'CEO', 'CFO', 'Procurement Manager', 'Purchase Officer']),
+  (req: Request, res: Response) => {
+    const { productId, quantity } = req.body;
+    if (!productId || !quantity || Number(quantity) <= 0) {
+      return res.status(400).json({ success: false, message: 'Valid product ID and replenishment quantity are required' });
+    }
+
+    const result = db.createReplenishmentPurchaseOrder({
+      productId,
+      quantity: Number(quantity),
+      user: currentSession.name,
+      userRole: currentSession.role,
+      companyId: currentSession.currentCompanyId,
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    res.json({
+      success: true,
+      data: result.purchaseOrder,
+      message: `Draft replenishment Purchase Order ${result.purchaseOrder?.poNumber} generated successfully and routed for approval.`,
+    });
   }
 );
 

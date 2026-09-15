@@ -381,6 +381,8 @@ export default function App() {
                 stockLedger={stockLedger}
                 warehouses={warehouses}
                 onAdjustStock={handleAdjustStock}
+                onRefreshProducts={refreshCore}
+                onNavigateToProcurement={() => setActiveModule('procurement')}
               />
             )}
 

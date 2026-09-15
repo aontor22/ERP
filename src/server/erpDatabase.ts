@@ -8,6 +8,8 @@ import {
   Employee,
   ExpenseBudget,
   ExpenseBudgetSummary,
+  InventoryForecastItem,
+  InventoryForecastSummary,
   JournalEntry,
   PayrollRun,
   Product,
@@ -16,6 +18,7 @@ import {
   SalesInvoice,
   SalesOrder,
   StockLedgerEntry,
+  StockoutRiskLevel,
   Supplier,
   SystemConfig,
   SystemNotification,
@@ -166,6 +169,9 @@ class ERPDatabase {
       currentStock: 8400,
       totalStockValue: 3528000,
       companyId: 'comp-textile',
+      leadTimeDays: 14,
+      supplierId: 'sup-001',
+      supplierName: 'Dhaka Yarn & Spinning Mills Ltd.',
       warehouseAllocations: [
         { warehouseId: 'wh-gzp-central', warehouseName: 'Central Raw Materials Depot', quantity: 8400 },
       ],
@@ -193,6 +199,9 @@ class ERPDatabase {
       currentStock: 1250,
       totalStockValue: 1187500,
       companyId: 'comp-textile',
+      leadTimeDays: 10,
+      supplierId: 'sup-003',
+      supplierName: 'DyStar Chemicals Bangladesh Ltd.',
       warehouseAllocations: [
         { warehouseId: 'wh-gzp-central', warehouseName: 'Central Raw Materials Depot', quantity: 1250 },
       ],
@@ -210,9 +219,9 @@ class ERPDatabase {
       costPrice: 780,
       sellingPrice: 1450,
       taxRate: 15,
-      reorderLevel: 500,
-      minStock: 200,
-      maxStock: 8000,
+      reorderLevel: 1200,
+      minStock: 500,
+      maxStock: 12000,
       weightKg: 0.28,
       valuationMethod: 'WAC',
       batchTracking: true,
@@ -220,6 +229,7 @@ class ERPDatabase {
       currentStock: 3400,
       totalStockValue: 2652000,
       companyId: 'comp-textile',
+      leadTimeDays: 20,
       warehouseAllocations: [
         { warehouseId: 'wh-gzp-fg', warehouseName: 'Finished Goods Bonded Warehouse', quantity: 2800 },
         { warehouseId: 'wh-ctg-export', warehouseName: 'Chittagong Port CFS Warehouse', quantity: 600 },
@@ -238,9 +248,9 @@ class ERPDatabase {
       costPrice: 1250,
       sellingPrice: 2400,
       taxRate: 15,
-      reorderLevel: 300,
-      minStock: 150,
-      maxStock: 4000,
+      reorderLevel: 800,
+      minStock: 300,
+      maxStock: 6000,
       weightKg: 0.65,
       valuationMethod: 'WAC',
       batchTracking: true,
@@ -248,6 +258,7 @@ class ERPDatabase {
       currentStock: 1950,
       totalStockValue: 2437500,
       companyId: 'comp-textile',
+      leadTimeDays: 25,
       warehouseAllocations: [
         { warehouseId: 'wh-gzp-fg', warehouseName: 'Finished Goods Bonded Warehouse', quantity: 1950 },
       ],
@@ -275,8 +286,71 @@ class ERPDatabase {
       currentStock: 320,
       totalStockValue: 57600,
       companyId: 'comp-textile',
+      leadTimeDays: 7,
+      supplierId: 'sup-002',
+      supplierName: 'YKK Fastening Products Bangladesh',
       warehouseAllocations: [
         { warehouseId: 'wh-gzp-central', warehouseName: 'Central Raw Materials Depot', quantity: 320 },
+      ],
+    },
+    {
+      id: 'prod-006',
+      sku: 'RM-ZIP-YKK-24',
+      barcode: '894102938106',
+      name: 'YKK Antique Brass Open-End Zipper #5 24"',
+      description: 'Heavy duty brass zipper for fleece hoodies and outerwear',
+      category: 'Trims & Accessories',
+      brand: 'YKK Fastening',
+      type: 'Raw Material',
+      unit: 'Pcs',
+      costPrice: 85,
+      sellingPrice: 110,
+      taxRate: 15,
+      reorderLevel: 450,
+      minStock: 200,
+      maxStock: 3000,
+      weightKg: 0.05,
+      valuationMethod: 'FIFO',
+      batchTracking: false,
+      serialTracking: false,
+      currentStock: 140,
+      totalStockValue: 11900,
+      companyId: 'comp-textile',
+      leadTimeDays: 10,
+      supplierId: 'sup-002',
+      supplierName: 'YKK Fastening Products Bangladesh',
+      warehouseAllocations: [
+        { warehouseId: 'wh-gzp-central', warehouseName: 'Central Raw Materials Depot', quantity: 140 },
+      ],
+    },
+    {
+      id: 'prod-007',
+      sku: 'RM-RIB-ELAS-20',
+      barcode: '894102938107',
+      name: 'Organic Cotton 1x1 Rib Knit Collar Fabric',
+      description: 'Pre-shrunk 95/5 cotton elastane rib fabric for cuffs and collars',
+      category: 'Raw Materials',
+      brand: 'Apex Spinning',
+      type: 'Raw Material',
+      unit: 'Kg',
+      costPrice: 480,
+      sellingPrice: 560,
+      taxRate: 5,
+      reorderLevel: 550,
+      minStock: 250,
+      maxStock: 3500,
+      weightKg: 1,
+      valuationMethod: 'FIFO',
+      batchTracking: true,
+      serialTracking: false,
+      currentStock: 480,
+      totalStockValue: 230400,
+      companyId: 'comp-textile',
+      leadTimeDays: 14,
+      supplierId: 'sup-001',
+      supplierName: 'Dhaka Yarn & Spinning Mills Ltd.',
+      warehouseAllocations: [
+        { warehouseId: 'wh-gzp-central', warehouseName: 'Central Raw Materials Depot', quantity: 480 },
       ],
     },
   ];
@@ -1711,6 +1785,312 @@ class ERPDatabase {
     });
 
     return { success: true, budget: updated };
+  }
+
+  public generateInventoryForecast(params: {
+    companyId?: string;
+    serviceLevelPercent?: number;
+    demandSurgePercent?: number;
+    leadTimeBufferDays?: number;
+  }): InventoryForecastSummary {
+    const serviceLevel = params.serviceLevelPercent ?? 95;
+    const demandSurge = params.demandSurgePercent ?? 0;
+    const leadTimeBuffer = params.leadTimeBufferDays ?? 0;
+
+    let zScore = 1.65; // 95%
+    if (serviceLevel <= 90) zScore = 1.28;
+    else if (serviceLevel >= 99) zScore = 2.33;
+    else if (serviceLevel >= 98) zScore = 2.05;
+    else if (serviceLevel >= 95) zScore = 1.65;
+    else zScore = 1.44;
+
+    const relevantProducts = this.products.filter(
+      (p) => !params.companyId || p.companyId === params.companyId
+    );
+
+    const surgeMultiplier = 1 + demandSurge / 100;
+
+    const demandProfiles: Record<
+      string,
+      { baseDailyDemand: number; demandStdDev: number; leadTimeDays: number; leadTimeStdDev: number; salesTrendPercent: number }
+    > = {
+      'RM-CTN-30S': { baseDailyDemand: 240, demandStdDev: 35, leadTimeDays: 14, leadTimeStdDev: 2.5, salesTrendPercent: 8.5 },
+      'RM-DYE-NVY': { baseDailyDemand: 45, demandStdDev: 8, leadTimeDays: 10, leadTimeStdDev: 2.0, salesTrendPercent: 6.2 },
+      'FG-POLO-NAVY-L': { baseDailyDemand: 85, demandStdDev: 14, leadTimeDays: 20, leadTimeStdDev: 3.0, salesTrendPercent: 12.4 },
+      'FG-HOODIE-BLK-M': { baseDailyDemand: 50, demandStdDev: 10, leadTimeDays: 25, leadTimeStdDev: 3.5, salesTrendPercent: 14.8 },
+      'RM-BTN-CORO-18': { baseDailyDemand: 8, demandStdDev: 1.5, leadTimeDays: 7, leadTimeStdDev: 1.0, salesTrendPercent: 4.1 },
+      'RM-ZIP-YKK-24': { baseDailyDemand: 22, demandStdDev: 4.2, leadTimeDays: 10, leadTimeStdDev: 2.0, salesTrendPercent: 11.0 },
+      'RM-RIB-ELAS-20': { baseDailyDemand: 32, demandStdDev: 5.0, leadTimeDays: 14, leadTimeStdDev: 2.5, salesTrendPercent: 7.3 },
+    };
+
+    const items: InventoryForecastItem[] = relevantProducts.map((p) => {
+      const profile = demandProfiles[p.sku] || {
+        baseDailyDemand: Math.max(5, Math.round(p.reorderLevel / 20)),
+        demandStdDev: Math.max(1, Math.round(p.reorderLevel / 100)),
+        leadTimeDays: p.leadTimeDays || 14,
+        leadTimeStdDev: 2,
+        salesTrendPercent: 5.0,
+      };
+
+      const adjustedDailyDemand = Math.round(profile.baseDailyDemand * surgeMultiplier * 10) / 10;
+      const adjustedDemandStdDev = Math.round(profile.demandStdDev * Math.sqrt(surgeMultiplier) * 10) / 10;
+      const totalLeadTimeDays = (p.leadTimeDays || profile.leadTimeDays) + leadTimeBuffer;
+      const leadTimeVariance = profile.leadTimeStdDev;
+
+      // Safety stock formula: Z * sqrt( L * sigma_d^2 + d^2 * sigma_L^2 )
+      const varianceCombined =
+        totalLeadTimeDays * Math.pow(adjustedDemandStdDev, 2) +
+        Math.pow(adjustedDailyDemand, 2) * Math.pow(leadTimeVariance, 2);
+      const safetyStock = Math.round(zScore * Math.sqrt(varianceCombined));
+
+      // Lead time demand: d * L
+      const leadTimeDemand = Math.round(adjustedDailyDemand * totalLeadTimeDays);
+
+      // Suggested Reorder Point (ROP): Lead Time Demand + Safety Stock
+      const suggestedReorderPoint = leadTimeDemand + safetyStock;
+      const reorderPointDelta = suggestedReorderPoint - p.reorderLevel;
+
+      // Economic Order Quantity (EOQ): sqrt( (2 * D * S) / H )
+      const annualDemand = adjustedDailyDemand * 365;
+      const orderSetupCost = 18000;
+      const annualHoldingCostPerUnit = Math.max(12, p.costPrice * 0.22);
+      const rawEoq = Math.sqrt((2 * annualDemand * orderSetupCost) / annualHoldingCostPerUnit);
+
+      let suggestedReorderQuantity = Math.max(
+        Math.round(rawEoq / 50) * 50,
+        Math.round(adjustedDailyDemand * 14)
+      );
+      if (suggestedReorderQuantity < 10) suggestedReorderQuantity = 10;
+
+      const estimatedReorderCost = suggestedReorderQuantity * p.costPrice;
+
+      const daysRemaining = adjustedDailyDemand > 0 ? p.currentStock / adjustedDailyDemand : 999;
+      const roundedDaysRemaining = Math.round(daysRemaining * 10) / 10;
+
+      const stockoutDateObj = new Date();
+      stockoutDateObj.setDate(stockoutDateObj.getDate() + Math.min(365, Math.max(0, Math.floor(daysRemaining))));
+      const estimatedStockoutDate = stockoutDateObj.toISOString().split('T')[0];
+
+      let stockoutRiskLevel: StockoutRiskLevel = 'OPTIMAL';
+      const stockoutWithinLeadTime = daysRemaining <= totalLeadTimeDays;
+
+      if (daysRemaining <= totalLeadTimeDays) {
+        stockoutRiskLevel = 'CRITICAL';
+      } else if (p.currentStock <= suggestedReorderPoint) {
+        stockoutRiskLevel = 'REORDER_NOW';
+      } else if (p.currentStock > (p.maxStock || suggestedReorderPoint * 3)) {
+        stockoutRiskLevel = 'OVERSTOCKED';
+      } else if (daysRemaining <= totalLeadTimeDays * 1.6) {
+        stockoutRiskLevel = 'MODERATE';
+      } else {
+        stockoutRiskLevel = 'OPTIMAL';
+      }
+
+      let aiRationale = '';
+      let aiActionRecommendation = '';
+
+      if (stockoutRiskLevel === 'CRITICAL') {
+        aiRationale = `Critical stockout alert: On-hand inventory (${p.currentStock.toLocaleString()} ${p.unit}) will deplete in ~${roundedDaysRemaining} days at current run-rate (${adjustedDailyDemand} ${p.unit}/day). Sourcing lead time is ${totalLeadTimeDays} days, causing a ${Math.max(1, Math.round(totalLeadTimeDays - roundedDaysRemaining))}-day operational stockout window.`;
+        aiActionRecommendation = `Expedite immediate Purchase Order for ${suggestedReorderQuantity.toLocaleString()} ${p.unit} with ${p.supplierName || 'primary supplier'}. Consider priority dispatch to protect active export deadlines.`;
+      } else if (stockoutRiskLevel === 'REORDER_NOW') {
+        aiRationale = `Inventory (${p.currentStock.toLocaleString()} ${p.unit}) has breached the AI-optimized reorder threshold of ${suggestedReorderPoint.toLocaleString()} ${p.unit}. Consumption rate is ${adjustedDailyDemand} ${p.unit}/day with ${totalLeadTimeDays}-day replenishment window.`;
+        aiActionRecommendation = `Approve planned replenishment PO for ${suggestedReorderQuantity.toLocaleString()} ${p.unit} (est. ৳${estimatedReorderCost.toLocaleString()}) to restore safety buffer before peak demand cycles.`;
+      } else if (stockoutRiskLevel === 'OVERSTOCKED') {
+        aiRationale = `Current stock exceeds optimal holding limits by ~${Math.round(((p.currentStock - (p.maxStock || 1000)) / (p.maxStock || 1000)) * 100)}%. Capital of ~৳${Math.round((p.currentStock - suggestedReorderPoint) * p.costPrice).toLocaleString()} is tied up in excess carrying stock.`;
+        aiActionRecommendation = `Pause automated replenishments. Prioritize FIFO batch turnover and allocate surplus finished goods to forthcoming customer orders.`;
+      } else if (stockoutRiskLevel === 'MODERATE') {
+        aiRationale = `Stock level covers ~${roundedDaysRemaining} days. Expected to reach reorder trigger within ${Math.max(1, Math.round(roundedDaysRemaining - totalLeadTimeDays))} days under current sales and production velocity.`;
+        aiActionRecommendation = `Confirm vendor lead times and capacity with ${p.supplierName || 'vendor'} in advance of upcoming reorder cycle.`;
+      } else {
+        aiRationale = `Healthy inventory equilibrium. On-hand balance provides ${roundedDaysRemaining} days of operational coverage with ${serviceLevel}% statistical service level protection.`;
+        aiActionRecommendation = `Maintain current monitoring. Suggested ROP of ${suggestedReorderPoint.toLocaleString()} ${p.unit} safely buffers lead time and demand variations.`;
+      }
+
+      return {
+        productId: p.id,
+        sku: p.sku,
+        name: p.name,
+        category: p.category,
+        type: p.type,
+        unit: p.unit,
+        currentStock: p.currentStock,
+        costPrice: p.costPrice,
+        sellingPrice: p.sellingPrice,
+        avgDailyDemand: adjustedDailyDemand,
+        demandStdDev: adjustedDemandStdDev,
+        monthlyRunRate: Math.round(adjustedDailyDemand * 30),
+        salesGrowthTrendPercent: profile.salesTrendPercent,
+        supplierLeadTimeDays: totalLeadTimeDays,
+        leadTimeVarianceDays: leadTimeVariance,
+        preferredSupplierId: p.supplierId,
+        preferredSupplierName: p.supplierName,
+        serviceLevelZ: zScore,
+        safetyStock,
+        leadTimeDemand,
+        suggestedReorderPoint,
+        currentReorderLevel: p.reorderLevel,
+        reorderPointDelta,
+        suggestedReorderQuantity,
+        currentMaxStock: p.maxStock,
+        estimatedReorderCost,
+        daysOfInventoryRemaining: roundedDaysRemaining,
+        stockoutRiskLevel,
+        stockoutWithinLeadTime,
+        estimatedStockoutDate,
+        aiRationale,
+        aiActionRecommendation,
+      };
+    });
+
+    const criticalStockoutCount = items.filter((i) => i.stockoutRiskLevel === 'CRITICAL').length;
+    const reorderRecommendedCount = items.filter(
+      (i) => i.stockoutRiskLevel === 'CRITICAL' || i.stockoutRiskLevel === 'REORDER_NOW'
+    ).length;
+    const optimalCount = items.filter((i) => i.stockoutRiskLevel === 'OPTIMAL').length;
+    const overstockedCount = items.filter((i) => i.stockoutRiskLevel === 'OVERSTOCKED').length;
+
+    const totalRecommendedReplenishmentValue = items
+      .filter((i) => i.stockoutRiskLevel === 'CRITICAL' || i.stockoutRiskLevel === 'REORDER_NOW')
+      .reduce((sum, i) => sum + i.estimatedReorderCost, 0);
+
+    const potentialStockoutRevenueAtRisk = items
+      .filter((i) => i.stockoutRiskLevel === 'CRITICAL')
+      .reduce((sum, i) => sum + i.avgDailyDemand * i.supplierLeadTimeDays * i.sellingPrice, 0);
+
+    const avgLeadTimeDays =
+      items.length > 0
+        ? Math.round(items.reduce((sum, i) => sum + i.supplierLeadTimeDays, 0) / items.length)
+        : 14;
+
+    const aiExecutiveSummary = `AI Inventory Audit: ${criticalStockoutCount} critical stockout alert and ${reorderRecommendedCount} reorder triggers identified across ${items.length} monitored SKUs. Recommended replenishment capital commitment is ৳${totalRecommendedReplenishmentValue.toLocaleString()} to protect ৳${potentialStockoutRevenueAtRisk.toLocaleString()} in potential stockout revenue at risk. Sourcing lead times average ${avgLeadTimeDays} days with ${serviceLevel}% targeted fulfillment service level.`;
+
+    return {
+      totalSkusAnalyzed: items.length,
+      criticalStockoutCount,
+      reorderRecommendedCount,
+      optimalCount,
+      overstockedCount,
+      totalRecommendedReplenishmentValue,
+      potentialStockoutRevenueAtRisk,
+      avgLeadTimeDays,
+      systemServiceLevel: serviceLevel,
+      scenarioParameters: {
+        serviceLevelPercent: serviceLevel,
+        demandSurgePercent: demandSurge,
+        leadTimeBufferDays: leadTimeBuffer,
+      },
+      aiExecutiveSummary,
+      lastForecastGeneratedAt: new Date().toISOString(),
+      items,
+    };
+  }
+
+  public applyInventoryForecast(params: {
+    productId: string;
+    suggestedReorderPoint: number;
+    suggestedReorderQuantity: number;
+    user: string;
+    userRole: string;
+    companyId: string;
+  }): { success: boolean; product?: Product; error?: string } {
+    const product = this.products.find((p) => p.id === params.productId);
+    if (!product) {
+      return { success: false, error: 'Product not found in master records.' };
+    }
+
+    const previousReorderLevel = product.reorderLevel;
+    const previousMaxStock = product.maxStock;
+
+    product.reorderLevel = Math.round(params.suggestedReorderPoint);
+    product.maxStock = Math.round(
+      Math.max(product.reorderLevel * 2, product.reorderLevel + params.suggestedReorderQuantity * 1.5)
+    );
+
+    this.addAuditLog({
+      user: params.user,
+      userRole: params.userRole as any,
+      ipAddress: '127.0.0.1',
+      action: 'Updated AI Inventory Reorder Policy',
+      module: 'Inventory',
+      entity: 'Product',
+      entityId: product.sku,
+      oldValue: `ROP: ${previousReorderLevel} | Max: ${previousMaxStock}`,
+      newValue: `AI-ROP: ${product.reorderLevel} | Max: ${product.maxStock} (EOQ: ${params.suggestedReorderQuantity})`,
+      companyId: params.companyId,
+    });
+
+    return { success: true, product };
+  }
+
+  public createReplenishmentPurchaseOrder(params: {
+    productId: string;
+    quantity: number;
+    user: string;
+    userRole: string;
+    companyId: string;
+  }): { success: boolean; purchaseOrder?: PurchaseOrder; error?: string } {
+    const product = this.products.find((p) => p.id === params.productId);
+    if (!product) return { success: false, error: 'Product not found' };
+
+    const supplier = this.suppliers.find((s) => s.id === product.supplierId) || this.suppliers[0];
+    const warehouse = this.warehouses[0];
+    const qty = Math.max(1, Math.round(params.quantity));
+    const subTotal = qty * product.costPrice;
+    const taxTotal = Math.round(subTotal * (product.taxRate / 100));
+    const grandTotal = subTotal + taxTotal;
+
+    const poNumber = `PO-2026-${String(this.purchaseOrders.length + 1).padStart(4, '0')}`;
+    const orderDate = new Date().toISOString().split('T')[0];
+    const expDate = new Date();
+    expDate.setDate(expDate.getDate() + (product.leadTimeDays || 14));
+    const expectedDeliveryDate = expDate.toISOString().split('T')[0];
+
+    const newPO: PurchaseOrder = {
+      id: `po-${Date.now()}`,
+      poNumber,
+      supplierId: supplier.id,
+      supplierName: supplier.name,
+      companyId: params.companyId,
+      warehouseId: warehouse.id,
+      warehouseName: warehouse.name,
+      orderDate,
+      expectedDeliveryDate,
+      status: 'Pending Approval',
+      paymentTerms: 'Net 30',
+      subTotal,
+      taxTotal,
+      grandTotal,
+      notes: `AI Reorder Recommendation: Automated replenishment for SKU ${product.sku} based on historical sales trends and lead time analysis.`,
+      items: [
+        {
+          productId: product.id,
+          productName: product.name,
+          sku: product.sku,
+          orderedQty: qty,
+          receivedQty: 0,
+          unitPrice: product.costPrice,
+          taxRate: product.taxRate,
+          lineTotal: subTotal,
+        },
+      ],
+      approvalStatus: 'Pending',
+    };
+
+    this.purchaseOrders.unshift(newPO);
+
+    this.addAuditLog({
+      user: params.user,
+      userRole: params.userRole as any,
+      ipAddress: '127.0.0.1',
+      action: 'Generated AI Replenishment PO',
+      module: 'Procurement',
+      entity: 'PurchaseOrder',
+      entityId: newPO.poNumber,
+      newValue: `Ordered ${qty} ${product.unit} of ${product.sku} from ${supplier.name} (Total: ৳${grandTotal.toLocaleString()})`,
+      companyId: params.companyId,
+    });
+
+    return { success: true, purchaseOrder: newPO };
   }
 }
 
