@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { RoleType, SystemNotification } from '../../types/erp.js';
 import { Language, translations } from '../../lib/i18n.js';
+import { getRoleProfile, isReadOnlyRole } from '../../lib/permissions.js';
 
 interface TopbarProps {
   currentCompany: any;
@@ -57,11 +58,13 @@ export const Topbar: React.FC<TopbarProps> = ({
   const roles: RoleType[] = [
     'Super Admin',
     'CFO',
-    'Accountant',
+    'Auditor',
+    'Procurement Manager',
     'Warehouse Manager',
     'Production Manager',
     'Sales Manager',
     'HR Manager',
+    'Accountant',
   ];
 
   // Close menus when clicking outside
@@ -200,39 +203,74 @@ export const Topbar: React.FC<TopbarProps> = ({
               setShowCompanyMenu(false);
               setShowNotifMenu(false);
             }}
-            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-950/40 hover:bg-amber-100/70 dark:hover:bg-amber-950/70 text-amber-900 dark:text-amber-300 transition-colors text-xs font-medium"
-            title="Switch user role to test RBAC & workflows"
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg border transition-colors text-xs font-medium ${
+              currentUser?.role === 'Auditor'
+                ? 'border-purple-300 dark:border-purple-800/80 bg-purple-50 dark:bg-purple-950/50 text-purple-900 dark:text-purple-300 hover:bg-purple-100/70'
+                : 'border-amber-200 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-950/40 hover:bg-amber-100/70 dark:hover:bg-amber-950/70 text-amber-900 dark:text-amber-300'
+            }`}
+            title="Switch user role to test granular permissions and read-only states"
           >
-            <ShieldCheck className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0" />
-            <span className="hidden sm:inline text-2xs text-amber-700 dark:text-amber-400 uppercase font-semibold">
+            <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline text-2xs uppercase font-semibold opacity-75">
               Role:
             </span>
             <span className="font-semibold text-xs max-w-[85px] sm:max-w-none truncate">{currentUser?.role || 'CFO'}</span>
-            <ChevronDown className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
+            {currentUser?.role === 'Auditor' && (
+              <span className="hidden md:inline-flex items-center text-3xs font-bold uppercase px-1.5 py-0.2 rounded bg-purple-200 dark:bg-purple-900 text-purple-900 dark:text-purple-200">
+                Read-Only
+              </span>
+            )}
+            <ChevronDown className="w-3 h-3 shrink-0 opacity-75" />
           </button>
 
           {showRoleMenu && (
-            <div className="absolute right-0 mt-1.5 w-56 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl p-1.5 z-50 animate-in fade-in zoom-in-95">
-              <p className="px-3 py-1.5 text-2xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                Simulate Enterprise Role
-              </p>
-              {roles.map((r) => (
-                <button
-                  key={r}
-                  onClick={() => {
-                    onSwitchRole(r);
-                    setShowRoleMenu(false);
-                  }}
-                  className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors ${
-                    r === currentUser?.role
-                      ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-semibold'
-                      : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <span>{r}</span>
-                  {r === currentUser?.role && <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />}
-                </button>
-              ))}
+            <div className="absolute right-0 mt-1.5 w-64 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl p-1.5 z-50 animate-in fade-in zoom-in-95">
+              <div className="px-3 py-1.5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 mb-1">
+                <span className="text-2xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  Select Enterprise Role
+                </span>
+                <span className="text-3xs text-slate-400 font-mono">RBAC Engine</span>
+              </div>
+              <div className="max-h-72 overflow-y-auto space-y-0.5">
+                {roles.map((r) => {
+                  const prof = getRoleProfile(r);
+                  const isSelected = r === currentUser?.role;
+                  return (
+                    <button
+                      key={r}
+                      onClick={() => {
+                        onSwitchRole(r);
+                        setShowRoleMenu(false);
+                      }}
+                      className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-colors ${
+                        isSelected
+                          ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 font-semibold'
+                          : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      <div className="truncate pr-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate font-semibold">{r}</span>
+                          {prof.isReadOnly && (
+                            <span className="text-3xs font-bold px-1 py-0.2 rounded bg-purple-100 dark:bg-purple-950/70 text-purple-800 dark:text-purple-300">
+                              Read-Only
+                            </span>
+                          )}
+                          {prof.isAdmin && (
+                            <span className="text-3xs font-bold px-1 py-0.2 rounded bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300">
+                              Admin
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-3xs text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                          {prof.category} &bull; {prof.badgeLabel}
+                        </p>
+                      </div>
+                      {isSelected && <span className="w-2 h-2 rounded-full bg-amber-600 shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>

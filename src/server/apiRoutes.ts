@@ -129,24 +129,42 @@ apiRouter.post('/auth/switch-role', (req: Request, res: Response) => {
   }
 
   currentSession.role = role;
-  if (role === 'Warehouse Manager') {
+  if (role === 'Auditor') {
+    currentSession.name = 'S. M. Rezwan, FCA';
+    currentSession.email = 'rezwan.audit@kpmg-bangladesh.com';
+    currentSession.permissions = ['audit:read', 'reports:read', 'ledgers:inspect'];
+  } else if (role === 'Procurement Manager') {
+    currentSession.name = 'Tariqul Islam';
+    currentSession.email = 'tariqul.procure@apex-group.com';
+    currentSession.permissions = ['po:create', 'po:approve', 'suppliers:manage', 'workflows:approve'];
+  } else if (role === 'Warehouse Manager') {
     currentSession.name = 'Rahim Uddin';
     currentSession.email = 'warehouse.head@apex-group.com';
+    currentSession.permissions = ['inventory:adjust', 'products:create', 'forecast:apply'];
   } else if (role === 'Production Manager') {
     currentSession.name = 'Jahangir Alam';
     currentSession.email = 'jahangir.prod@apex-group.com';
+    currentSession.permissions = ['production:create', 'boms:manage', 'mrp:view'];
   } else if (role === 'Accountant') {
     currentSession.name = 'Farzana Yasmin';
     currentSession.email = 'farzana.y@apex-group.com';
+    currentSession.permissions = ['journals:create', 'invoices:create', 'reports:read'];
   } else if (role === 'Sales Manager') {
     currentSession.name = 'Kamrul Hasan';
     currentSession.email = 'sales.kamrul@apex-group.com';
+    currentSession.permissions = ['sales:create', 'invoices:create', 'customers:manage'];
+  } else if (role === 'HR Manager') {
+    currentSession.name = 'Nusrat Jahan';
+    currentSession.email = 'nusrat.hr@apex-group.com';
+    currentSession.permissions = ['payroll:generate', 'employees:manage'];
   } else if (role === 'Super Admin' || role === 'CEO') {
     currentSession.name = 'Syed Manzur Elahi';
     currentSession.email = 'chairman@apex-group.com';
+    currentSession.permissions = ['*'];
   } else {
     currentSession.name = 'Anwar Hossain, FCMA';
     currentSession.email = 'cfo.anwar@apex-group.com';
+    currentSession.permissions = ['finance:*', 'approvals:*', 'reports:*'];
   }
 
   db.addAuditLog({

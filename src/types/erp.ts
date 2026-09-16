@@ -14,6 +14,7 @@ export type RoleType =
   | 'Production Manager'
   | 'Quality Manager'
   | 'HR Manager'
+  | 'Auditor'
   | 'Employee'
   | 'Viewer';
 

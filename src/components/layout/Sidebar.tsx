@@ -17,6 +17,8 @@ import {
   X,
 } from 'lucide-react';
 import { Language, translations } from '../../lib/i18n.js';
+import { canAccessModule, isReadOnlyRole, getRoleProfile } from '../../lib/permissions.js';
+import { Lock, Shield, Eye } from 'lucide-react';
 
 export type ActiveModule =
   | 'dashboard'
@@ -37,6 +39,7 @@ interface SidebarProps {
   activeModule: ActiveModule;
   onSelectModule: (mod: ActiveModule) => void;
   lang: Language;
+  currentUser?: any;
   pendingApprovalsCount?: number;
   isOpen?: boolean;
   onClose?: () => void;
@@ -46,11 +49,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeModule,
   onSelectModule,
   lang,
+  currentUser,
   pendingApprovalsCount = 0,
   isOpen = false,
   onClose,
 }) => {
   const t = translations[lang];
+  const isAuditor = currentUser?.role === 'Auditor';
+  const roleProf = getRoleProfile(currentUser);
 
   const sections = [
     {
@@ -147,6 +153,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {section.items.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeModule === item.id;
+                const isAccessible = canAccessModule(currentUser, item.id);
+
                 return (
                   <button
                     key={item.id}
@@ -155,25 +163,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-lg font-medium transition-colors ${
                       isActive
                         ? 'bg-blue-600 text-white font-semibold shadow-xs'
-                        : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+                        : isAccessible
+                        ? 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+                        : 'text-slate-500 hover:bg-slate-800/40 hover:text-slate-400'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                    <div className="flex items-center gap-2.5 truncate">
+                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : isAccessible ? 'text-slate-400' : 'text-slate-600'}`} />
                       <span className="truncate">{item.label}</span>
                     </div>
 
-                    {item.badge !== undefined && (
-                      <span
-                        className={`text-2xs px-1.5 py-0.2 rounded-full font-bold ${
-                          isActive
-                            ? 'bg-white text-blue-700'
-                            : 'bg-rose-500/90 text-white'
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {!isAccessible && (
+                        <Lock className="w-3 h-3 text-slate-600" />
+                      )}
+                      {item.badge !== undefined && (
+                        <span
+                          className={`text-2xs px-1.5 py-0.2 rounded-full font-bold ${
+                            isActive
+                              ? 'bg-white text-blue-700'
+                              : 'bg-rose-500/90 text-white'
+                          }`}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
                   </button>
                 );
               })}
@@ -181,6 +196,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         ))}
       </nav>
+
+      {/* Role Profile Badge */}
+      <div className="p-3 border-t border-slate-800/80 bg-slate-950/50 shrink-0">
+        <div className="flex items-center justify-between text-2xs mb-1">
+          <span className="text-slate-400 font-semibold truncate max-w-[130px]">
+            {currentUser?.name || 'Active User'}
+          </span>
+          <span
+            className={`text-3xs font-bold px-1.5 py-0.2 rounded ${
+              isAuditor
+                ? 'bg-purple-900/60 text-purple-300 border border-purple-700/50'
+                : roleProf.isAdmin
+                ? 'bg-blue-900/60 text-blue-300 border border-blue-700/50'
+                : 'bg-slate-800 text-slate-300 border border-slate-700'
+            }`}
+          >
+            {isAuditor ? 'Auditor' : roleProf.isAdmin ? 'Admin' : 'Operator'}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 text-3xs text-slate-400">
+          {isAuditor ? (
+            <>
+              <Eye className="w-3 h-3 text-purple-400 shrink-0" />
+              <span className="text-purple-300 truncate">Read-Only Audit Mode Active</span>
+            </>
+          ) : roleProf.isAdmin ? (
+            <>
+              <Shield className="w-3 h-3 text-blue-400 shrink-0" />
+              <span className="text-blue-300 truncate">Full Admin Privileges</span>
+            </>
+          ) : (
+            <>
+              <Shield className="w-3 h-3 text-emerald-400 shrink-0" />
+              <span className="text-slate-300 truncate">{currentUser?.role || 'User'}</span>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* Database & Compliance Status Footer */}
       <div className="p-3.5 border-t border-slate-800 bg-slate-950/30 text-2xs space-y-1 shrink-0">
