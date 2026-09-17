@@ -159,20 +159,33 @@ The reporting infrastructure (`/src/components/modules/ReportsView.tsx`) serves 
 
 ApexERP leverages `recharts` to render responsive, theme-adaptive data visualizations across multiple operational horizons:
 
-1. **Monthly Revenue & Net Margin Trends (`MonthlyRevenueTrendsChart.tsx`)**:
+1. **Top-Level Executive Summary KPI Row & Interactive Drill-Down (`ReportsView.tsx` & `KpiDetailDrilldown.tsx`)**:
+   - **Persistent Overview**: Sits directly below the report banner to provide instant cross-module clarity on gross operating revenue, total expenses, current inventory asset valuation, and audited net operating profit.
+   - **Interactive Metric Selection**: Clicking any of the four KPI cards toggles an interactive drill-down mode (`selectedKpi`), highlighting the active card with a focused border ring and smooth entrance animation.
+   - **Detailed Data Table Drill-Down**:
+     - **Total Revenue**: Invoicing audit ledger with instant search and status filtering (*All*, *Paid*, *Pending/Due*, *Overdue*), tax BIN tracking, and subtotal/VAT reconciliation.
+     - **Total Expenses**: Expenditure breakdown by cost center with category filters (*All*, *Workforce Payroll*, *Direct COGS*, *Plant & Overheads*), voucher references, and fiscal share calculations.
+     - **Current Inventory Value**: Perpetual SKU valuation schedule with category filters (*All*, *Raw Materials*, *Finished Apparel*, *Low Stock Alert*), warehouse allocations, and unit cost rates.
+     - **Net Operating Profit**: Multi-step statutory Income Statement (P&L) waterfall reconciling gross turnover against COGS, operating overheads, workforce payroll, and estimated withholding tax.
+   - **Bi-Directional Visual Chart Synchronization**:
+     - Toggling **Filtered Visual Chart** in the drill-down panel or clicking a KPI card automatically updates the underlying Recharts visualizations (`MonthlyRevenueTrendsChart` and `InventoryTurnoverChart`) using the `activeMetricFilter` prop.
+     - Revenue filters to isolated turnover trajectory (`revenue_only`), expenses filters to operational costs (`revenue_expenses`), net profit focuses on profitability margins (`revenue_profit`), and inventory isolates asset valuation vs. stock turns (`value_vs_turnover`).
+   - **Responsive Scaling & Print-Native Formatting**: Adapts from 1 column on mobile to 2 columns on tablet and a 4-card grid on desktop (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`). In browser print mode, transitions into a high-contrast 4-column summary row with printable audit certification.
+
+2. **Monthly Revenue & Net Margin Trends (`MonthlyRevenueTrendsChart.tsx`)**:
    - **Line Chart Visualization**: Plots multi-period trajectories including Operating Revenue (emerald), Operating Expenses (rose/amber), and Audited Net Profit (blue).
    - **Configurable Horizons**: Interactive toggle between 3-month, 6-month, and full 12-month rolling windows.
    - **Metric Focus Modes**: Ability to isolate Revenue vs. Profit, Net Margins, or view all series concurrently.
    - **Calculated Metric Highlights**: Auto-calculates Period Gross Revenue, Operating Expenses, Net Operating Profit, Average Margin %, and MoM Velocity.
    - **Placement**: Available directly in the **Executive Visual Trends & Turnover Analytics** tab and as a collapsible drawer inside the **Statement of Financial Position & Trial Balance** view.
 
-2. **Inventory Turnover & Holding Days (`InventoryTurnoverChart.tsx`)**:
+3. **Inventory Turnover & Holding Days (`InventoryTurnoverChart.tsx`)**:
    - **Bar Chart Visualization**: Plots Category-level Annualized Turnover Ratios (turns per year) and Days Sales of Inventory (DSI / holding days) alongside total asset valuation.
    - **Working Capital Health Indicators**: Categorizes inventory velocity into *Optimal Velocity* ($\ge 6.0\times$), *Standard Movement* ($4.0\times - 5.9\times$), and *Capital Tied / Slow* ($< 4.0\times$).
    - **Sorting & Filtering**: Dynamic sorting by Turnover Ratio, Days on Hand, or Asset Valuation.
    - **Placement**: Rendered in the **Executive Visual Trends & Turnover Analytics** tab and as an inline drawer inside the **Stock Valuation & Movement Analysis** view.
 
-3. **Theme & Print Optimization**:
+4. **Theme & Print Optimization**:
    - Recharts tooltips, grid lines, and axis labels dynamically synchronize with the active theme (`dark` / `light`).
    - All interactive controls (buttons, toolbars, collapsers) leverage Tailwind's `print:hidden` utility to ensure clean physical printouts.
 

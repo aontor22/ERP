@@ -42,6 +42,7 @@ interface MonthlyRevenueTrendsChartProps {
   subtitle?: string;
   height?: number;
   showControls?: boolean;
+  activeMetricFilter?: 'all' | 'revenue_profit' | 'revenue_expenses' | 'revenue_only';
 }
 
 // Default 12-month baseline if parent data is loading or partial
@@ -67,10 +68,20 @@ export const MonthlyRevenueTrendsChart: React.FC<MonthlyRevenueTrendsChartProps>
   subtitle = '12-month audited operating revenue trajectory, net profit margin, and growth velocity',
   height = 320,
   showControls = true,
+  activeMetricFilter,
 }) => {
   const [timeRange, setTimeRange] = useState<'12m' | '6m' | '3m'>('12m');
-  const [viewMetric, setViewMetric] = useState<'all' | 'revenue_profit' | 'revenue_expenses' | 'revenue_only'>('revenue_profit');
+  const [viewMetric, setViewMetric] = useState<'all' | 'revenue_profit' | 'revenue_expenses' | 'revenue_only'>(
+    activeMetricFilter || 'revenue_profit'
+  );
   const [showTargetLine, setShowTargetLine] = useState<boolean>(true);
+
+  // Sync state if activeMetricFilter changes externally from KPI card clicks
+  React.useEffect(() => {
+    if (activeMetricFilter) {
+      setViewMetric(activeMetricFilter);
+    }
+  }, [activeMetricFilter]);
 
   // Derive consolidated dataset
   const chartData = useMemo(() => {

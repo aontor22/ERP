@@ -16,12 +16,17 @@ import {
   LineChart as LineChartIcon,
   ChevronDown,
   ChevronUp,
+  CreditCard,
+  ArrowUpRight,
+  ArrowDownRight,
+  Wallet,
 } from 'lucide-react';
 import { formatCurrency } from '../../lib/i18n.js';
 import { exportToCSV } from '../../lib/csvExport.js';
 import { generateReportPDF, PDFSummaryCard } from '../../lib/pdfExport.js';
 import { MonthlyRevenueTrendsChart } from '../reports/MonthlyRevenueTrendsChart.js';
 import { InventoryTurnoverChart } from '../reports/InventoryTurnoverChart.js';
+import { KpiDetailDrilldown, KpiMetricType } from '../reports/KpiDetailDrilldown.js';
 
 interface ReportsViewProps {
   stats: any;
@@ -48,6 +53,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [showInlineRevenueChart, setShowInlineRevenueChart] = useState(true);
   const [showInlineTurnoverChart, setShowInlineTurnoverChart] = useState(true);
+  const [selectedKpi, setSelectedKpi] = useState<KpiMetricType | null>(null);
   const [exportFeedback, setExportFeedback] = useState<{
     type: 'csv' | 'pdf';
     filename: string;
@@ -106,6 +112,44 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     () => employees.reduce((sum, e) => sum + (Number(e.netPayable) || 0), 0),
     [employees]
   );
+
+  // Top-Level Executive KPI metrics
+  const effectiveRevenue = useMemo(() => {
+    if (stats?.revenue && Number(stats.revenue) > 0) return Number(stats.revenue);
+    if (totalRevenue > 0) return totalRevenue;
+    const trends = stats?.monthlyTrends;
+    if (trends && trends.length > 0) {
+      return trends.reduce((acc: number, t: any) => acc + (t.revenue || 0), 0);
+    }
+    return 0;
+  }, [stats, totalRevenue]);
+
+  const effectiveExpenses = useMemo(() => {
+    if (stats?.expenses && Number(stats.expenses) > 0) return Number(stats.expenses);
+    const trends = stats?.monthlyTrends;
+    if (trends && trends.length > 0) {
+      return trends.reduce((acc: number, t: any) => acc + (t.expenses || 0), 0);
+    }
+    return totalGrossPayroll > 0 ? totalGrossPayroll : 0;
+  }, [stats, totalGrossPayroll]);
+
+  const effectiveInventoryValue = useMemo(() => {
+    if (totalInventoryValuation > 0) return totalInventoryValuation;
+    if (stats?.inventoryValue && Number(stats.inventoryValue) > 0) return Number(stats.inventoryValue);
+    return 0;
+  }, [totalInventoryValuation, stats]);
+
+  const effectiveNetProfit = useMemo(() => {
+    if (stats?.netProfit !== undefined && stats?.netProfit !== null && !isNaN(Number(stats.netProfit))) {
+      return Number(stats.netProfit);
+    }
+    return effectiveRevenue - effectiveExpenses;
+  }, [stats, effectiveRevenue, effectiveExpenses]);
+
+  const netMarginPercent = useMemo(() => {
+    if (effectiveRevenue <= 0) return 0;
+    return Number(((effectiveNetProfit / effectiveRevenue) * 100).toFixed(1));
+  }, [effectiveNetProfit, effectiveRevenue]);
 
   // 2. Filtered data based on search
   const filteredTrialBalance = useMemo(() => {
@@ -643,6 +687,274 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         </div>
       )}
 
+      {/* Formal Document Header - ONLY visible during Browser Print (appears at top of printout) */}
+      <div className="hidden print:block mb-5 pb-3 border-b-2 border-black text-black">
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-black tracking-tight uppercase text-black">
+                {companyName}
+              </span>
+              <span className="text-3xs font-bold px-1.5 py-0.5 border border-black uppercase">
+                Official Audit Document
+              </span>
+            </div>
+            <p className="text-xs text-slate-800 mt-0.5">{companyAddress}</p>
+            <p className="text-xs font-mono text-slate-900 mt-0.5">
+              Tax Registration: <strong>{companyTaxId}</strong> | TIN: 817263541920 | Tax Circle: 12 (LTU)
+            </p>
+          </div>
+
+          <div className="text-right">
+            <div className="text-xs font-mono font-bold text-black">
+              REF: {reportMeta.docCode}
+            </div>
+            <div className="text-3xs text-slate-700 font-mono mt-0.5">
+              Print Date: {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} at{' '}
+              {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+            <div className="text-3xs text-slate-700 font-mono">
+              Currency: BDT (Bangladeshi Taka)
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 pt-2.5 border-t border-slate-400 flex justify-between items-end">
+          <div>
+            <h2 className="text-base font-black tracking-tight uppercase text-black">
+              {reportMeta.title}
+            </h2>
+            <p className="text-xs text-slate-700">{reportMeta.subtitle}</p>
+          </div>
+          <div className="text-right text-3xs font-mono text-slate-700">
+            <div>Standard: {reportMeta.statutoryRef}</div>
+            <div>Prepared By: <strong>{preparedBy}</strong></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Top-Level Executive Summary KPI Cards - Responsive, Interactive & Print-Friendly */}
+      <div
+        id="reports-top-kpi-summary"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4 print:gap-3 print:mb-5 print-avoid-break"
+      >
+        {/* Card 1: Total Revenue */}
+        <div
+          id="kpi-total-revenue"
+          role="button"
+          tabIndex={0}
+          onClick={() => setSelectedKpi((prev) => (prev === 'revenue' ? null : 'revenue'))}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setSelectedKpi((prev) => (prev === 'revenue' ? null : 'revenue'));
+            }
+          }}
+          className={`cursor-pointer rounded-xl border p-4 sm:p-4.5 shadow-2xs transition-all hover:shadow-md active:scale-[0.99] print:border-slate-400 print:bg-white print:p-2.5 print:shadow-none print-avoid-break ${
+            selectedKpi === 'revenue'
+              ? 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/25'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-3xs sm:text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 print:text-black">
+              Total Revenue
+            </span>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center print:hidden ${
+              selectedKpi === 'revenue'
+                ? 'bg-emerald-500 text-white shadow-xs'
+                : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
+            }`}>
+              <TrendingUp className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline justify-between gap-2">
+            <span className="text-lg sm:text-xl font-bold font-mono text-slate-900 dark:text-white print:text-black tracking-tight">
+              {formatCurrency(effectiveRevenue)}
+            </span>
+          </div>
+          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 print:border-slate-300 print:text-black">
+            <span className="truncate">
+              {selectedKpi === 'revenue' ? 'Active Detail View' : 'Audited Inflow'}
+            </span>
+            <span className="inline-flex items-center gap-0.5 font-semibold text-emerald-600 dark:text-emerald-400 print:text-black">
+              <ArrowUpRight className="w-3 h-3 print:hidden" />
+              <span>{invoices.length} Invoices</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Card 2: Total Operating Expenses */}
+        <div
+          id="kpi-total-expenses"
+          role="button"
+          tabIndex={0}
+          onClick={() => setSelectedKpi((prev) => (prev === 'expenses' ? null : 'expenses'))}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setSelectedKpi((prev) => (prev === 'expenses' ? null : 'expenses'));
+            }
+          }}
+          className={`cursor-pointer rounded-xl border p-4 sm:p-4.5 shadow-2xs transition-all hover:shadow-md active:scale-[0.99] print:border-slate-400 print:bg-white print:p-2.5 print:shadow-none print-avoid-break ${
+            selectedKpi === 'expenses'
+              ? 'ring-2 ring-rose-500 border-rose-500 bg-rose-50/20 dark:bg-rose-950/25'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-3xs sm:text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 print:text-black">
+              Total Expenses
+            </span>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center print:hidden ${
+              selectedKpi === 'expenses'
+                ? 'bg-rose-500 text-white shadow-xs'
+                : 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400'
+            }`}>
+              <CreditCard className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline justify-between gap-2">
+            <span className="text-lg sm:text-xl font-bold font-mono text-slate-900 dark:text-white print:text-black tracking-tight">
+              {formatCurrency(effectiveExpenses)}
+            </span>
+          </div>
+          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 print:border-slate-300 print:text-black">
+            <span className="truncate">
+              {selectedKpi === 'expenses' ? 'Active Detail View' : 'COGS & Overheads'}
+            </span>
+            <span className="font-semibold text-rose-600 dark:text-rose-400 print:text-black">
+              Operational Cost
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: Current Inventory Value */}
+        <div
+          id="kpi-inventory-value"
+          role="button"
+          tabIndex={0}
+          onClick={() => setSelectedKpi((prev) => (prev === 'inventory' ? null : 'inventory'))}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setSelectedKpi((prev) => (prev === 'inventory' ? null : 'inventory'));
+            }
+          }}
+          className={`cursor-pointer rounded-xl border p-4 sm:p-4.5 shadow-2xs transition-all hover:shadow-md active:scale-[0.99] print:border-slate-400 print:bg-white print:p-2.5 print:shadow-none print-avoid-break ${
+            selectedKpi === 'inventory'
+              ? 'ring-2 ring-blue-500 border-blue-500 bg-blue-50/20 dark:bg-blue-950/25'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-3xs sm:text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 print:text-black">
+              Current Inventory Value
+            </span>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center print:hidden ${
+              selectedKpi === 'inventory'
+                ? 'bg-blue-500 text-white shadow-xs'
+                : 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
+            }`}>
+              <Package className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline justify-between gap-2">
+            <span className="text-lg sm:text-xl font-bold font-mono text-slate-900 dark:text-white print:text-black tracking-tight">
+              {formatCurrency(effectiveInventoryValue)}
+            </span>
+          </div>
+          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 print:border-slate-300 print:text-black">
+            <span className="truncate">
+              {selectedKpi === 'inventory' ? 'Active Detail View' : `${products.length} Active SKUs`}
+            </span>
+            <span className="font-semibold text-blue-600 dark:text-blue-400 print:text-black">
+              {totalStockUnits.toLocaleString()} Units
+            </span>
+          </div>
+        </div>
+
+        {/* Card 4: Net Operating Profit */}
+        <div
+          id="kpi-net-profit"
+          role="button"
+          tabIndex={0}
+          onClick={() => setSelectedKpi((prev) => (prev === 'profit' ? null : 'profit'))}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setSelectedKpi((prev) => (prev === 'profit' ? null : 'profit'));
+            }
+          }}
+          className={`cursor-pointer rounded-xl border p-4 sm:p-4.5 shadow-2xs transition-all hover:shadow-md active:scale-[0.99] print:border-slate-400 print:bg-white print:p-2.5 print:shadow-none print-avoid-break ${
+            selectedKpi === 'profit'
+              ? 'ring-2 ring-indigo-500 border-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/25'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-3xs sm:text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 print:text-black">
+              Net Operating Profit
+            </span>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center print:hidden ${
+              selectedKpi === 'profit'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : effectiveNetProfit >= 0
+                ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400'
+                : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400'
+            }`}>
+              <Scale className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline justify-between gap-2">
+            <span className={`text-lg sm:text-xl font-bold font-mono tracking-tight print:text-black ${
+              effectiveNetProfit >= 0
+                ? 'text-slate-900 dark:text-white'
+                : 'text-rose-600 dark:text-rose-400'
+            }`}>
+              {formatCurrency(effectiveNetProfit)}
+            </span>
+          </div>
+          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 print:border-slate-300 print:text-black">
+            <span className="truncate">
+              {selectedKpi === 'profit' ? 'Active Detail View' : 'Operating Margin'}
+            </span>
+            <span className={`font-semibold print:text-black ${
+              effectiveNetProfit >= 0
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-amber-600 dark:text-amber-400'
+            }`}>
+              {netMarginPercent}% Margin
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Interactive KPI Drill-Down Panel & Filtered Data Table */}
+      {selectedKpi && (
+        <KpiDetailDrilldown
+          metric={selectedKpi}
+          onClose={() => setSelectedKpi(null)}
+          onJumpToTab={(targetTab) => {
+            setReportType(targetTab);
+            setSearchQuery('');
+          }}
+          invoices={invoices}
+          products={products}
+          employees={employees}
+          stats={stats}
+          effectiveRevenue={effectiveRevenue}
+          effectiveExpenses={effectiveExpenses}
+          effectiveInventoryValue={effectiveInventoryValue}
+          effectiveNetProfit={effectiveNetProfit}
+          netMarginPercent={netMarginPercent}
+          totalVat={totalVat}
+          totalGrossPayroll={totalGrossPayroll}
+          totalPayrollTds={totalPayrollTds}
+          totalStockUnits={totalStockUnits}
+        />
+      )}
+
       {/* Report Tabs */}
       <div className="flex items-center border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 rounded-t-xl overflow-x-auto whitespace-nowrap transition-colors print:hidden">
         <button
@@ -760,52 +1072,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         </div>
       </div>
 
-      {/* Formal Document Header - ONLY visible during Browser Print */}
-      <div className="hidden print:block mb-6 pb-4 border-b-2 border-black text-black">
-        <div className="flex justify-between items-start">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-black tracking-tight uppercase text-black">
-                {companyName}
-              </span>
-              <span className="text-3xs font-bold px-1.5 py-0.5 border border-black uppercase">
-                Official Audit Document
-              </span>
-            </div>
-            <p className="text-xs text-slate-800 mt-0.5">{companyAddress}</p>
-            <p className="text-xs font-mono text-slate-900 mt-0.5">
-              Tax Registration: <strong>{companyTaxId}</strong> | TIN: 817263541920 | Tax Circle: 12 (LTU)
-            </p>
-          </div>
-
-          <div className="text-right">
-            <div className="text-xs font-mono font-bold text-black">
-              REF: {reportMeta.docCode}
-            </div>
-            <div className="text-3xs text-slate-700 font-mono mt-0.5">
-              Print Date: {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} at{' '}
-              {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-            </div>
-            <div className="text-3xs text-slate-700 font-mono">
-              Currency: BDT (Bangladeshi Taka)
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 pt-3 border-t border-slate-400 flex justify-between items-end">
-          <div>
-            <h2 className="text-base font-black tracking-tight uppercase text-black">
-              {reportMeta.title}
-            </h2>
-            <p className="text-xs text-slate-700">{reportMeta.subtitle}</p>
-          </div>
-          <div className="text-right text-3xs font-mono text-slate-700">
-            <div>Standard: {reportMeta.statutoryRef}</div>
-            <div>Prepared By: <strong>{preparedBy}</strong></div>
-          </div>
-        </div>
-      </div>
-
       {/* REPORT 1: FINANCIAL TRIAL BALANCE */}
       {reportType === 'financial' && (
         <div className="bg-white dark:bg-slate-900 rounded-b-xl border-x border-b border-slate-200 dark:border-slate-800 p-6 shadow-2xs space-y-6 transition-colors print:border-none print:shadow-none print:p-0 print:space-y-4">
@@ -856,6 +1122,15 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 title="Monthly Operating Revenue & Net Margin Trends"
                 subtitle="Visualized with Recharts — audited 12-month trajectory, net profit margin, and growth velocity"
                 height={280}
+                activeMetricFilter={
+                  selectedKpi === 'revenue'
+                    ? 'revenue_only'
+                    : selectedKpi === 'expenses'
+                    ? 'revenue_expenses'
+                    : selectedKpi === 'profit'
+                    ? 'revenue_profit'
+                    : undefined
+                }
               />
             )}
           </div>
@@ -1097,6 +1372,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 title="Category Inventory Turnover & Working Capital Velocity"
                 subtitle="Visualized with Recharts — category annual turnover ratios, days sales of inventory (DSI), and velocity ratings"
                 height={280}
+                activeMetricFilter={selectedKpi === 'inventory' ? 'value_vs_turnover' : undefined}
               />
             )}
           </div>
@@ -1349,6 +1625,15 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               subtitle="Recharts Line Visualization — monthly operating revenue, audited net profit, and MoM velocity"
               height={320}
               showControls={true}
+              activeMetricFilter={
+                selectedKpi === 'revenue'
+                  ? 'revenue_only'
+                  : selectedKpi === 'expenses'
+                  ? 'revenue_expenses'
+                  : selectedKpi === 'profit'
+                  ? 'revenue_profit'
+                  : undefined
+              }
             />
           </div>
 
@@ -1360,6 +1645,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               subtitle="Recharts Bar Visualization — category-level turnover ratio (turns/yr), holding days (DSI), and working capital rating"
               height={320}
               showControls={true}
+              activeMetricFilter={selectedKpi === 'inventory' ? 'value_vs_turnover' : undefined}
             />
           </div>
 

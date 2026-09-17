@@ -43,6 +43,7 @@ interface InventoryTurnoverChartProps {
   subtitle?: string;
   height?: number;
   showControls?: boolean;
+  activeMetricFilter?: 'turnover' | 'days' | 'value_vs_turnover';
 }
 
 // Category baseline multipliers for textile & manufacturing operational benchmarks
@@ -61,9 +62,19 @@ export const InventoryTurnoverChart: React.FC<InventoryTurnoverChartProps> = ({
   subtitle = 'Category-level inventory turnover ratios, days sales of inventory (DSI), and working capital velocity',
   height = 320,
   showControls = true,
+  activeMetricFilter,
 }) => {
-  const [metricView, setMetricView] = useState<'turnover' | 'days' | 'value_vs_turnover'>('turnover');
+  const [metricView, setMetricView] = useState<'turnover' | 'days' | 'value_vs_turnover'>(
+    activeMetricFilter || 'turnover'
+  );
   const [sortBy, setSortBy] = useState<'turnover' | 'value'>('turnover');
+
+  // Sync state if activeMetricFilter changes externally from KPI card clicks
+  React.useEffect(() => {
+    if (activeMetricFilter) {
+      setMetricView(activeMetricFilter);
+    }
+  }, [activeMetricFilter]);
 
   // Compute category turnover metrics
   const categoryData: CategoryTurnoverMetric[] = useMemo(() => {
