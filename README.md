@@ -21,6 +21,9 @@
   - [11. Financial Reports & Export Engine](#11-financial-reports--export-engine)
   - [12. Immutable Audit Trail & Compliance](#12-immutable-audit-trail--compliance)
   - [13. System Settings & Regulatory Parameters](#13-system-settings--regulatory-parameters)
+- [Financial Reporting, Visual Analytics & Print Architecture](#financial-reporting-visual-analytics--print-architecture)
+  - [Recharts Visual Analytics Integration](#recharts-visual-analytics-integration)
+  - [Dedicated Browser Print & Audit Certification](#dedicated-browser-print--audit-certification)
 - [Role-Based Access Control (RBAC) & Security](#role-based-access-control-rbac--security)
 - [Technology Stack](#technology-stack)
 - [Project Directory Structure](#project-directory-structure)
@@ -119,10 +122,22 @@ ApexERP is engineered for mid-market and enterprise organizations operating comp
 - **Auditor Verification**: Read-only oversight for compliance inspectors with full visibility into requester, reviewer notes, and timestamps.
 
 ### 11. Financial Reports & Export Engine
-- **Income Statement (P&L)**: Revenue, Cost of Goods Sold, Gross Margin, Operating Expenses, and Net Profit.
-- **Balance Sheet**: Comprehensive Asset, Liability, and Equity positioning.
-- **Trial Balance & Cash Flow Statements**: Live operational audits and liquidity reporting.
-- **Exporting Options**: Download clean, professional PDF reports with formatted financial tables via jsPDF, or export raw CSV data.
+- **Income Statement (P&L) & Trial Balance**: Double-entry general ledger verification with automatic debit/credit balance reconciliation.
+- **NBR VAT Sub-form 9.1 Revenue Schedule**: Statutory output tax calculations compliant with Bangladesh VAT Act 2012.
+- **Perpetual Inventory Valuation**: Material asset balances computed under BAS-2 (FIFO / Weighted Average Costing).
+- **Workforce Payroll & TDS Withholding**: Statutory salary deductions compliant with NBR Income Tax Act 2023.
+- **Executive Visual Trends & Turnover Analytics (Recharts)**:
+  - **Monthly Operating Revenue & Margin Trajectory (`MonthlyRevenueTrendsChart`)**: Interactive multi-series line chart depicting 12-month revenue growth, operating expenses, and net profit with MoM velocity indicators.
+  - **Inventory Turnover & Holding Days (`InventoryTurnoverChart`)**: Interactive category bar chart illustrating annual inventory turns, Days Sales of Inventory (DSI), and working capital liquidity ratings.
+  - **Collapsible Inline Charts**: Both financial and inventory report views feature collapsible Recharts drawers for immediate operational insights.
+- **Dedicated Browser Print Engine**:
+  - Direct 1-click **"Print Report"** trigger calling native `window.print()` with optimized `@media print` rules.
+  - Generates formal legal document headers with company details, Tax IDs (BIN/TIN), audit timestamps, and document tracking codes (`APEX-FIN`, `APEX-VAT`, `APEX-INV`, `APEX-PAY`, `APEX-BI`).
+  - Automatically incorporates a tri-signature executive certification block (*Prepared By*, *Internal Audit*, and *CFO / CEO Approval*) at the conclusion of every physical printout.
+  - Formatted pagination rules (`page-break-inside: avoid; page-break-after: auto`) preventing table row clipping.
+- **Multi-Format Document Export**:
+  - Clean client-side PDF document generation via `jsPDF` and `jsPDF-AutoTable` with custom column widths, summary cards, and totals.
+  - Raw tabular CSV downloads with company metadata headers.
 
 ### 12. Immutable Audit Trail & Compliance
 - **SOC2 / ISO 27001 Preparedness**: Immutable event logging for every user action, state change, and financial transaction.
@@ -133,6 +148,50 @@ ApexERP is engineered for mid-market and enterprise organizations operating comp
 - **Taxation & Compliance**: Bangladesh NBR VAT rates (default 15%), Tax Deducted at Source (TDS), and tax registration numbers.
 - **Multi-Currency Treasury**: Base operating currency (BDT, USD, EUR, GBP) and real-time live FX rate conversion.
 - **Appearance**: Instant toggle between Light Mode and Dark Mode with full UI persistence.
+
+---
+
+## Financial Reporting, Visual Analytics & Print Architecture
+
+The reporting infrastructure (`/src/components/modules/ReportsView.tsx`) serves as the compliance and audit reconciliation center of ApexERP, bridging raw general ledger entries with statutory filings and executive business intelligence.
+
+### Recharts Visual Analytics Integration
+
+ApexERP leverages `recharts` to render responsive, theme-adaptive data visualizations across multiple operational horizons:
+
+1. **Monthly Revenue & Net Margin Trends (`MonthlyRevenueTrendsChart.tsx`)**:
+   - **Line Chart Visualization**: Plots multi-period trajectories including Operating Revenue (emerald), Operating Expenses (rose/amber), and Audited Net Profit (blue).
+   - **Configurable Horizons**: Interactive toggle between 3-month, 6-month, and full 12-month rolling windows.
+   - **Metric Focus Modes**: Ability to isolate Revenue vs. Profit, Net Margins, or view all series concurrently.
+   - **Calculated Metric Highlights**: Auto-calculates Period Gross Revenue, Operating Expenses, Net Operating Profit, Average Margin %, and MoM Velocity.
+   - **Placement**: Available directly in the **Executive Visual Trends & Turnover Analytics** tab and as a collapsible drawer inside the **Statement of Financial Position & Trial Balance** view.
+
+2. **Inventory Turnover & Holding Days (`InventoryTurnoverChart.tsx`)**:
+   - **Bar Chart Visualization**: Plots Category-level Annualized Turnover Ratios (turns per year) and Days Sales of Inventory (DSI / holding days) alongside total asset valuation.
+   - **Working Capital Health Indicators**: Categorizes inventory velocity into *Optimal Velocity* ($\ge 6.0\times$), *Standard Movement* ($4.0\times - 5.9\times$), and *Capital Tied / Slow* ($< 4.0\times$).
+   - **Sorting & Filtering**: Dynamic sorting by Turnover Ratio, Days on Hand, or Asset Valuation.
+   - **Placement**: Rendered in the **Executive Visual Trends & Turnover Analytics** tab and as an inline drawer inside the **Stock Valuation & Movement Analysis** view.
+
+3. **Theme & Print Optimization**:
+   - Recharts tooltips, grid lines, and axis labels dynamically synchronize with the active theme (`dark` / `light`).
+   - All interactive controls (buttons, toolbars, collapsers) leverage Tailwind's `print:hidden` utility to ensure clean physical printouts.
+
+### Dedicated Browser Print & Audit Certification
+
+The dedicated **Print Report** button invokes the browser's native print engine (`window.print()`), styled via dedicated CSS print media queries (`@media print` in `src/index.css`):
+
+- **Statutory Document Header**: Displays company legal title, Tax Identification Numbers (BIN / TIN), registered office address, audit reference standards (IFRS/BAS/NBR), document serial code, and generation timestamp.
+- **Print Optimization Rules**:
+  - Automatically suppresses navigation bars, sidebars, search inputs, interactive buttons, and theme toggles via `.print:hidden`.
+  - Forces pure monochromatic contrast (`print:text-black`, `print:bg-white`) to eliminate washed-out gray tones and wasteful ink usage.
+  - Applies `break-inside: avoid` (`.print-avoid-break`) on KPI cards, table rows, and signatures to prevent awkward mid-table page splits.
+- **Executive Audit Certification Footer**:
+  - Emitted exclusively on printed sheets (`hidden print:block`).
+  - Contains formal tri-party signature lines:
+    1. **Prepared By (Finance Officer)**
+    2. **Internal Audit & Compliance Verification**
+    3. **Chief Financial Officer / CEO Final Executive Approval**
+  - Includes statutory compliance annotations citing Bangladesh VAT Act 2012 & Income Tax Act 2023.
 
 ---
 
@@ -205,10 +264,13 @@ When switched to **Internal Auditor** or **External Tax Auditor**:
 │   │   │   ├── OrganizationView.tsx
 │   │   │   ├── ProcurementView.tsx
 │   │   │   ├── ProductsView.tsx
-│   │   │   ├── ReportsView.tsx
+│   │   │   ├── ReportsView.tsx   # Comprehensive reporting, print engine & exports
 │   │   │   ├── SalesView.tsx
 │   │   │   ├── SettingsView.tsx
 │   │   │   └── WorkflowsView.tsx
+│   │   ├── reports/              # Recharts analytical visualization components
+│   │   │   ├── InventoryTurnoverChart.tsx
+│   │   │   └── MonthlyRevenueTrendsChart.tsx
 │   │   └── ui/                   # Reusable atomic UI (DataTable, Modal, Badge, PermissionGate)
 │   ├── lib/
 │   │   ├── api.ts                # Client API abstraction & fetch wrappers
