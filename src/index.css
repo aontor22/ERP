@@ -3,24 +3,69 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @media print {
+  @page {
+    margin: 12mm 15mm;
+    size: auto;
+  }
+
   aside,
   header,
   nav,
   button,
-  input {
+  input,
+  .no-print {
     display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  html,
+  body,
+  #root,
+  main,
+  div {
+    overflow: visible !important;
+    height: auto !important;
   }
 
   body,
   main {
     background: white !important;
     color: black !important;
-    overflow: visible !important;
-    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
+  /* High-contrast and clean layout for printed documentation */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
   }
+
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  tr,
+  .print-avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}
+
+.print-only {
+  display: none;
 }

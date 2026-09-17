@@ -423,6 +423,39 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     }
   };
 
+  const reportMeta = useMemo(() => {
+    switch (reportType) {
+      case 'financial':
+        return {
+          title: 'Statement of Financial Position & Trial Balance',
+          subtitle: 'Comprehensive General Ledger Double-Entry Trial Balance Records & Verification',
+          statutoryRef: 'IFRS / BFRS / Bangladesh Financial Reporting Standards',
+          docCode: `APEX-FIN-${dateStamp}`,
+        };
+      case 'sales':
+        return {
+          title: 'Bangladesh NBR VAT Sub-return 9.1 & Revenue Breakdown',
+          subtitle: 'Automated Statutory Output Tax Computation on Taxable Supplies (VAT Act 2012)',
+          statutoryRef: 'National Board of Revenue (NBR) — VAT Act 2012 / Section 64',
+          docCode: `APEX-VAT-${dateStamp}`,
+        };
+      case 'inventory':
+        return {
+          title: 'Perpetual Physical Inventory & Material Asset Valuation',
+          subtitle: 'Warehouse Holdings, Moving Average Cost Rates, and FIFO/WAC Asset Ledger under BAS-2',
+          statutoryRef: 'BAS-2 (Inventories) / Deterministic FIFO Asset Valuation',
+          docCode: `APEX-INV-${dateStamp}`,
+        };
+      case 'payroll':
+        return {
+          title: 'Operational Payroll & Statutory TDS Tax Withholding Summary',
+          subtitle: 'Workforce Payroll Obligations, Statutory TDS Deductions & Net Disbursements',
+          statutoryRef: 'NBR Income Tax Act 2023 — Section 50 / TDS Withholding',
+          docCode: `APEX-PAY-${dateStamp}`,
+        };
+    }
+  }, [reportType, dateStamp]);
+
   const handlePrint = () => {
     window.print();
   };
@@ -448,7 +481,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Banner */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs transition-colors">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs transition-colors print:hidden">
         <div>
           <div className="flex items-center gap-2">
             <Building2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -492,18 +525,18 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             type="button"
             id="print-report-btn"
             onClick={handlePrint}
-            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 rounded-lg text-xs font-semibold transition-colors shadow-2xs cursor-pointer flex-1 sm:flex-none"
-            title="Print or save as browser PDF"
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white rounded-lg text-xs font-semibold transition-all shadow-2xs cursor-pointer flex-1 sm:flex-none active:scale-98"
+            title="Open browser print dialog for clean documentation generation (Ctrl+P / ⌘P)"
           >
-            <Printer className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-            <span>Print</span>
+            <Printer className="w-4 h-4 text-slate-200 dark:text-slate-700" />
+            <span>Print Report</span>
           </button>
         </div>
       </div>
 
       {/* Export Confirmation Feedback */}
       {exportFeedback && (
-        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-between gap-2 animate-in fade-in">
+        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-between gap-2 animate-in fade-in print:hidden">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span>
@@ -520,7 +553,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       )}
 
       {/* Report Tabs */}
-      <div className="flex items-center border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 rounded-t-xl overflow-x-auto whitespace-nowrap transition-colors">
+      <div className="flex items-center border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 rounded-t-xl overflow-x-auto whitespace-nowrap transition-colors print:hidden">
         <button
           id="tab-financial"
           onClick={() => {
@@ -587,7 +620,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       </div>
 
       {/* Filter & Live Search Toolbar */}
-      <div className="bg-white dark:bg-slate-900 px-4 py-3 border-x border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+      <div className="bg-white dark:bg-slate-900 px-4 py-3 border-x border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs print:hidden">
         <div className="relative w-full sm:w-80">
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
@@ -618,26 +651,72 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         </div>
       </div>
 
+      {/* Formal Document Header - ONLY visible during Browser Print */}
+      <div className="hidden print:block mb-6 pb-4 border-b-2 border-black text-black">
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-black tracking-tight uppercase text-black">
+                {companyName}
+              </span>
+              <span className="text-3xs font-bold px-1.5 py-0.5 border border-black uppercase">
+                Official Audit Document
+              </span>
+            </div>
+            <p className="text-xs text-slate-800 mt-0.5">{companyAddress}</p>
+            <p className="text-xs font-mono text-slate-900 mt-0.5">
+              Tax Registration: <strong>{companyTaxId}</strong> | TIN: 817263541920 | Tax Circle: 12 (LTU)
+            </p>
+          </div>
+
+          <div className="text-right">
+            <div className="text-xs font-mono font-bold text-black">
+              REF: {reportMeta.docCode}
+            </div>
+            <div className="text-3xs text-slate-700 font-mono mt-0.5">
+              Print Date: {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} at{' '}
+              {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+            <div className="text-3xs text-slate-700 font-mono">
+              Currency: BDT (Bangladeshi Taka)
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-slate-400 flex justify-between items-end">
+          <div>
+            <h2 className="text-base font-black tracking-tight uppercase text-black">
+              {reportMeta.title}
+            </h2>
+            <p className="text-xs text-slate-700">{reportMeta.subtitle}</p>
+          </div>
+          <div className="text-right text-3xs font-mono text-slate-700">
+            <div>Standard: {reportMeta.statutoryRef}</div>
+            <div>Prepared By: <strong>{preparedBy}</strong></div>
+          </div>
+        </div>
+      </div>
+
       {/* REPORT 1: FINANCIAL TRIAL BALANCE */}
       {reportType === 'financial' && (
-        <div className="bg-white dark:bg-slate-900 rounded-b-xl border-x border-b border-slate-200 dark:border-slate-800 p-6 shadow-2xs space-y-6 transition-colors">
+        <div className="bg-white dark:bg-slate-900 rounded-b-xl border-x border-b border-slate-200 dark:border-slate-800 p-6 shadow-2xs space-y-6 transition-colors print:border-none print:shadow-none print:p-0 print:space-y-4">
           {/* Summary KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
-            <div className="p-4 bg-blue-50/60 dark:bg-blue-950/30 rounded-xl border border-blue-100 dark:border-blue-900/50">
-              <span className="text-2xs font-semibold uppercase text-blue-700 dark:text-blue-400">Gross Operating Revenue</span>
-              <p className="text-lg font-bold font-mono text-blue-950 dark:text-blue-200 mt-1">{formatCurrency(stats?.revenue || 0)}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pb-6 border-b border-slate-100 dark:border-slate-800 print:grid-cols-4 print:pb-3 print:gap-3 print:border-slate-400">
+            <div className="p-4 bg-blue-50/60 dark:bg-blue-950/30 rounded-xl border border-blue-100 dark:border-blue-900/50 print:bg-white print:border-slate-400 print:p-2">
+              <span className="text-2xs font-semibold uppercase text-blue-700 dark:text-blue-400 print:text-black">Gross Operating Revenue</span>
+              <p className="text-lg font-bold font-mono text-blue-950 dark:text-blue-200 print:text-black mt-1">{formatCurrency(stats?.revenue || 0)}</p>
             </div>
-            <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/30 rounded-xl border border-emerald-100 dark:border-emerald-900/50">
-              <span className="text-2xs font-semibold uppercase text-emerald-700 dark:text-emerald-400">Audited Net Profit</span>
-              <p className="text-lg font-bold font-mono text-emerald-950 dark:text-emerald-200 mt-1">{formatCurrency(stats?.netProfit || 0)}</p>
+            <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/30 rounded-xl border border-emerald-100 dark:border-emerald-900/50 print:bg-white print:border-slate-400 print:p-2">
+              <span className="text-2xs font-semibold uppercase text-emerald-700 dark:text-emerald-400 print:text-black">Audited Net Profit</span>
+              <p className="text-lg font-bold font-mono text-emerald-950 dark:text-emerald-200 print:text-black mt-1">{formatCurrency(stats?.netProfit || 0)}</p>
             </div>
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
-              <span className="text-2xs font-semibold uppercase text-slate-600 dark:text-slate-400">Total Liquid Reserves</span>
-              <p className="text-lg font-bold font-mono text-slate-900 dark:text-white mt-1">{formatCurrency(stats?.cashBalance || 0)}</p>
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 print:bg-white print:border-slate-400 print:p-2">
+              <span className="text-2xs font-semibold uppercase text-slate-600 dark:text-slate-400 print:text-black">Total Liquid Reserves</span>
+              <p className="text-lg font-bold font-mono text-slate-900 dark:text-white print:text-black mt-1">{formatCurrency(stats?.cashBalance || 0)}</p>
             </div>
-            <div className="p-4 bg-purple-50/60 dark:bg-purple-950/30 rounded-xl border border-purple-100 dark:border-purple-900/50">
-              <span className="text-2xs font-semibold uppercase text-purple-700 dark:text-purple-400">Trial Balance Equality</span>
-              <p className="text-lg font-bold font-mono text-purple-950 dark:text-purple-200 mt-1">
+            <div className="p-4 bg-purple-50/60 dark:bg-purple-950/30 rounded-xl border border-purple-100 dark:border-purple-900/50 print:bg-white print:border-slate-400 print:p-2">
+              <span className="text-2xs font-semibold uppercase text-purple-700 dark:text-purple-400 print:text-black">Trial Balance Equality</span>
+              <p className="text-lg font-bold font-mono text-purple-950 dark:text-purple-200 print:text-black mt-1">
                 {totalDebits === totalCredits ? '100% Balanced' : 'Variance Detected'}
               </p>
             </div>
@@ -646,10 +725,19 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           <div>
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">General Ledger Balances Summary</h3>
-                <p className="text-2xs text-slate-500 dark:text-slate-400">Deterministic double-entry trial balance ledger records</p>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white print:text-black">General Ledger Balances Summary</h3>
+                <p className="text-2xs text-slate-500 dark:text-slate-400 print:text-slate-600">Deterministic double-entry trial balance ledger records</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 print:hidden">
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="px-2.5 py-1 text-2xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Print this report"
+                >
+                  <Printer className="w-3 h-3 text-slate-600 dark:text-slate-400" />
+                  <span>Print</span>
+                </button>
                 <button
                   onClick={handleExportCSV}
                   className="px-2.5 py-1 text-2xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition-colors"
@@ -667,9 +755,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
-              <table className="w-full text-xs text-left text-slate-600 dark:text-slate-300">
-                <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase border-b border-slate-200 dark:border-slate-700 text-3xs tracking-wider">
+            <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800 print:border-slate-400 print:overflow-visible print:rounded-none">
+              <table className="w-full text-xs text-left text-slate-600 dark:text-slate-300 print:text-black">
+                <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase border-b border-slate-200 dark:border-slate-700 text-3xs tracking-wider print:bg-slate-100 print:text-black print:border-slate-400">
                   <tr>
                     <th className="py-2.5 px-3">GL Code</th>
                     <th className="py-2.5 px-3">Account Title</th>
@@ -721,29 +809,38 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
       {/* REPORT 2: NBR VAT-9.1 SALES BREAKDOWN */}
       {reportType === 'sales' && (
-        <div className="bg-white dark:bg-slate-900 rounded-b-xl border-x border-b border-slate-200 dark:border-slate-800 p-6 shadow-2xs space-y-6 transition-colors">
-          <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="bg-white dark:bg-slate-900 rounded-b-xl border-x border-b border-slate-200 dark:border-slate-800 p-6 shadow-2xs space-y-6 transition-colors print:border-none print:shadow-none print:p-0 print:space-y-4">
+          <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 print:bg-white print:border-slate-400 print:p-3">
             <div>
-              <h3 className="text-sm font-bold text-emerald-950 dark:text-emerald-200">
+              <h3 className="text-sm font-bold text-emerald-950 dark:text-emerald-200 print:text-black">
                 Bangladesh NBR VAT Sub-return 9.1 Summary
               </h3>
-              <p className="text-2xs text-emerald-700 dark:text-emerald-400 mt-0.5">
+              <p className="text-2xs text-emerald-700 dark:text-emerald-400 print:text-slate-600 mt-0.5">
                 Automated statutory output tax computation on taxable supplies (VAT Act 2012)
               </p>
             </div>
             <div className="text-left sm:text-right">
-              <span className="text-2xs uppercase text-emerald-700 dark:text-emerald-400 font-bold">Total VAT Output Payable</span>
-              <p className="text-xl font-bold font-mono text-emerald-950 dark:text-emerald-200">{formatCurrency(totalVat)}</p>
+              <span className="text-2xs uppercase text-emerald-700 dark:text-emerald-400 print:text-black font-bold">Total VAT Output Payable</span>
+              <p className="text-xl font-bold font-mono text-emerald-950 dark:text-emerald-200 print:text-black">{formatCurrency(totalVat)}</p>
             </div>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Taxable Sales Invoices</h3>
-                <p className="text-2xs text-slate-500 dark:text-slate-400">Taxable supplies and 15% statutory output withholding</p>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white print:text-black">Taxable Sales Invoices</h3>
+                <p className="text-2xs text-slate-500 dark:text-slate-400 print:text-slate-600">Taxable supplies and 15% statutory output withholding</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 print:hidden">
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="px-2.5 py-1 text-2xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Print this report"
+                >
+                  <Printer className="w-3 h-3 text-slate-600 dark:text-slate-400" />
+                  <span>Print</span>
+                </button>
                 <button
                   onClick={handleExportCSV}
                   className="px-2.5 py-1 text-2xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition-colors"
@@ -761,9 +858,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
-              <table className="w-full text-xs text-left text-slate-600 dark:text-slate-300">
-                <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase border-b border-slate-200 dark:border-slate-700 text-3xs tracking-wider">
+            <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800 print:border-slate-400 print:overflow-visible print:rounded-none">
+              <table className="w-full text-xs text-left text-slate-600 dark:text-slate-300 print:text-black">
+                <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase border-b border-slate-200 dark:border-slate-700 text-3xs tracking-wider print:bg-slate-100 print:text-black print:border-slate-400">
                   <tr>
                     <th className="py-2.5 px-3">Invoice #</th>
                     <th className="py-2.5 px-3">Customer Entity</th>
@@ -826,25 +923,34 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
       {/* REPORT 3: INVENTORY VALUATION & ASSET MOVEMENT */}
       {reportType === 'inventory' && (
-        <div className="bg-white dark:bg-slate-900 rounded-b-xl border-x border-b border-slate-200 dark:border-slate-800 p-6 shadow-2xs space-y-6 transition-colors">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b border-slate-100 dark:border-slate-800 gap-4">
+        <div className="bg-white dark:bg-slate-900 rounded-b-xl border-x border-b border-slate-200 dark:border-slate-800 p-6 shadow-2xs space-y-6 transition-colors print:border-none print:shadow-none print:p-0 print:space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b border-slate-100 dark:border-slate-800 gap-4 print:bg-white print:border-slate-400 print:p-3">
             <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Total Material Asset Valuation</h3>
-              <p className="text-2xs text-slate-500 dark:text-slate-400">Calculated strictly under deterministic FIFO/WAC rules under BAS-2</p>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white print:text-black">Total Material Asset Valuation</h3>
+              <p className="text-2xs text-slate-500 dark:text-slate-400 print:text-slate-600">Calculated strictly under deterministic FIFO/WAC rules under BAS-2</p>
             </div>
             <div className="text-left sm:text-right">
-              <span className="text-2xs uppercase text-slate-400 font-bold">Net Stock Balance Value</span>
-              <p className="text-xl font-bold font-mono text-emerald-700 dark:text-emerald-400">{formatCurrency(totalInventoryValuation)}</p>
+              <span className="text-2xs uppercase text-slate-400 print:text-black font-bold">Net Stock Balance Value</span>
+              <p className="text-xl font-bold font-mono text-emerald-700 dark:text-emerald-400 print:text-black">{formatCurrency(totalInventoryValuation)}</p>
             </div>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Perpetual Stock Ledger Inventory</h3>
-                <p className="text-2xs text-slate-500 dark:text-slate-400">Warehouse holdings, cost rates, and total asset worth</p>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white print:text-black">Perpetual Stock Ledger Inventory</h3>
+                <p className="text-2xs text-slate-500 dark:text-slate-400 print:text-slate-600">Warehouse holdings, cost rates, and total asset worth</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 print:hidden">
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="px-2.5 py-1 text-2xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Print this report"
+                >
+                  <Printer className="w-3 h-3 text-slate-600 dark:text-slate-400" />
+                  <span>Print</span>
+                </button>
                 <button
                   onClick={handleExportCSV}
                   className="px-2.5 py-1 text-2xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition-colors"
@@ -862,9 +968,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
-              <table className="w-full text-xs text-left text-slate-600 dark:text-slate-300">
-                <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase border-b border-slate-200 dark:border-slate-700 text-3xs tracking-wider">
+            <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800 print:border-slate-400 print:overflow-visible print:rounded-none">
+              <table className="w-full text-xs text-left text-slate-600 dark:text-slate-300 print:text-black">
+                <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase border-b border-slate-200 dark:border-slate-700 text-3xs tracking-wider print:bg-slate-100 print:text-black print:border-slate-400">
                   <tr>
                     <th className="py-2.5 px-3">SKU</th>
                     <th className="py-2.5 px-3">Item Description</th>
@@ -919,33 +1025,42 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
       {/* REPORT 4: OPERATIONAL PAYROLL & TAX WITHHOLDING */}
       {reportType === 'payroll' && (
-        <div className="bg-white dark:bg-slate-900 rounded-b-xl border-x border-b border-slate-200 dark:border-slate-800 p-6 shadow-2xs space-y-6 transition-colors">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
-            <div className="p-4 bg-indigo-50/60 dark:bg-indigo-950/30 rounded-xl border border-indigo-100 dark:border-indigo-900/50">
-              <span className="text-2xs font-semibold uppercase text-indigo-700 dark:text-indigo-400">Gross Monthly Payroll</span>
-              <p className="text-lg font-bold font-mono text-indigo-950 dark:text-indigo-200 mt-1">{formatCurrency(totalGrossPayroll)}</p>
+        <div className="bg-white dark:bg-slate-900 rounded-b-xl border-x border-b border-slate-200 dark:border-slate-800 p-6 shadow-2xs space-y-6 transition-colors print:border-none print:shadow-none print:p-0 print:space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pb-6 border-b border-slate-100 dark:border-slate-800 print:grid-cols-4 print:pb-3 print:gap-3 print:border-slate-400">
+            <div className="p-4 bg-indigo-50/60 dark:bg-indigo-950/30 rounded-xl border border-indigo-100 dark:border-indigo-900/50 print:bg-white print:border-slate-400 print:p-2">
+              <span className="text-2xs font-semibold uppercase text-indigo-700 dark:text-indigo-400 print:text-black">Gross Monthly Payroll</span>
+              <p className="text-lg font-bold font-mono text-indigo-950 dark:text-indigo-200 print:text-black mt-1">{formatCurrency(totalGrossPayroll)}</p>
             </div>
-            <div className="p-4 bg-amber-50/60 dark:bg-amber-950/30 rounded-xl border border-amber-100 dark:border-amber-900/50">
-              <span className="text-2xs font-semibold uppercase text-amber-700 dark:text-amber-400">Total TDS Withholding</span>
-              <p className="text-lg font-bold font-mono text-amber-950 dark:text-amber-200 mt-1">{formatCurrency(totalPayrollTds)}</p>
+            <div className="p-4 bg-amber-50/60 dark:bg-amber-950/30 rounded-xl border border-amber-100 dark:border-amber-900/50 print:bg-white print:border-slate-400 print:p-2">
+              <span className="text-2xs font-semibold uppercase text-amber-700 dark:text-amber-400 print:text-black">Total TDS Withholding</span>
+              <p className="text-lg font-bold font-mono text-amber-950 dark:text-amber-200 print:text-black mt-1">{formatCurrency(totalPayrollTds)}</p>
             </div>
-            <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/30 rounded-xl border border-emerald-100 dark:border-emerald-900/50">
-              <span className="text-2xs font-semibold uppercase text-emerald-700 dark:text-emerald-400">Net Disbursements</span>
-              <p className="text-lg font-bold font-mono text-emerald-950 dark:text-emerald-200 mt-1">{formatCurrency(totalNetPayable)}</p>
+            <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/30 rounded-xl border border-emerald-100 dark:border-emerald-900/50 print:bg-white print:border-slate-400 print:p-2">
+              <span className="text-2xs font-semibold uppercase text-emerald-700 dark:text-emerald-400 print:text-black">Net Disbursements</span>
+              <p className="text-lg font-bold font-mono text-emerald-950 dark:text-emerald-200 print:text-black mt-1">{formatCurrency(totalNetPayable)}</p>
             </div>
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
-              <span className="text-2xs font-semibold uppercase text-slate-600 dark:text-slate-400">Workforce Headcount</span>
-              <p className="text-lg font-bold font-mono text-slate-900 dark:text-white mt-1">{employees.length} Employees</p>
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 print:bg-white print:border-slate-400 print:p-2">
+              <span className="text-2xs font-semibold uppercase text-slate-600 dark:text-slate-400 print:text-black">Workforce Headcount</span>
+              <p className="text-lg font-bold font-mono text-slate-900 dark:text-white print:text-black mt-1">{employees.length} Employees</p>
             </div>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Employee Compensation & Withholdings</h3>
-                <p className="text-2xs text-slate-500 dark:text-slate-400">Salary breakdown, allowances, and statutory income tax deductions</p>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white print:text-black">Employee Compensation & Withholdings</h3>
+                <p className="text-2xs text-slate-500 dark:text-slate-400 print:text-slate-600">Salary breakdown, allowances, and statutory income tax deductions</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 print:hidden">
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="px-2.5 py-1 text-2xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Print this report"
+                >
+                  <Printer className="w-3 h-3 text-slate-600 dark:text-slate-400" />
+                  <span>Print</span>
+                </button>
                 <button
                   onClick={handleExportCSV}
                   className="px-2.5 py-1 text-2xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition-colors"
@@ -963,9 +1078,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
-              <table className="w-full text-xs text-left text-slate-600 dark:text-slate-300">
-                <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase border-b border-slate-200 dark:border-slate-700 text-3xs tracking-wider">
+            <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800 print:border-slate-400 print:overflow-visible print:rounded-none">
+              <table className="w-full text-xs text-left text-slate-600 dark:text-slate-300 print:text-black">
+                <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase border-b border-slate-200 dark:border-slate-700 text-3xs tracking-wider print:bg-slate-100 print:text-black print:border-slate-400">
                   <tr>
                     <th className="py-2.5 px-3">Emp ID</th>
                     <th className="py-2.5 px-3">Employee Name</th>
@@ -1014,6 +1129,38 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Formal Signatures & Audit Certification Footer - ONLY visible during Browser Print */}
+      <div className="hidden print:block mt-10 pt-6 border-t-2 border-black text-black print-avoid-break">
+        <div className="grid grid-cols-3 gap-8 mb-6">
+          <div className="border-t border-slate-500 pt-2 text-center">
+            <div className="text-xs font-bold uppercase">{preparedBy}</div>
+            <div className="text-3xs text-slate-700">Prepared By (Finance Officer)</div>
+            <div className="text-3xs text-slate-600 font-mono mt-1">Signature: ______________________</div>
+          </div>
+
+          <div className="border-t border-slate-500 pt-2 text-center">
+            <div className="text-xs font-bold uppercase">Internal Audit & Compliance</div>
+            <div className="text-3xs text-slate-700">Verified & Reconciled By</div>
+            <div className="text-3xs text-slate-600 font-mono mt-1">Signature: ______________________</div>
+          </div>
+
+          <div className="border-t border-slate-500 pt-2 text-center">
+            <div className="text-xs font-bold uppercase">Chief Financial Officer / CEO</div>
+            <div className="text-3xs text-slate-700">Final Executive Approval</div>
+            <div className="text-3xs text-slate-600 font-mono mt-1">Signature: ______________________</div>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center text-3xs text-slate-600 font-mono pt-2 border-t border-slate-300">
+          <div>
+            CONFIDENTIAL & PROPRIETARY — Certified system-generated record from ApexERP Enterprise Platform.
+          </div>
+          <div>
+            Compliant with NBR VAT Act 2012 & Income Tax Act 2023
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
