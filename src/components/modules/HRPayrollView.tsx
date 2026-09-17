@@ -5,17 +5,20 @@ import { DataTable, Column } from '../ui/DataTable.js';
 import { Badge } from '../ui/Badge.js';
 import { Modal } from '../ui/Modal.js';
 import { formatCurrency, formatDate } from '../../lib/i18n.js';
+import { SecureActionButton, AuditorReadonlyBanner } from '../ui/PermissionGate.js';
 
 interface HRPayrollViewProps {
   employees: Employee[];
   payrollRuns: PayrollRun[];
   onGeneratePayroll: (data: { periodName: string; month: number; year: number }) => Promise<void>;
+  currentUser?: any;
 }
 
 export const HRPayrollView: React.FC<HRPayrollViewProps> = ({
   employees,
   payrollRuns,
   onGeneratePayroll,
+  currentUser,
 }) => {
   const [activeTab, setActiveTab] = useState<'employees' | 'payroll'>('employees');
   const [isPayrollModalOpen, setIsPayrollModalOpen] = useState(false);
@@ -159,6 +162,9 @@ export const HRPayrollView: React.FC<HRPayrollViewProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Read-Only Auditor Banner */}
+      <AuditorReadonlyBanner currentUser={currentUser} entityName="Employee compensation, salary records, and payroll runs" />
+
       {/* Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
         <div>
@@ -177,13 +183,16 @@ export const HRPayrollView: React.FC<HRPayrollViewProps> = ({
               {formatCurrency(totalMonthlyPayroll)}
             </p>
           </div>
-          <button
+          <SecureActionButton
+            id="process-payroll-btn"
+            action="payroll:run"
+            currentUser={currentUser}
             onClick={() => setIsPayrollModalOpen(true)}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-2xs w-full sm:w-auto"
+            icon={Play}
+            className="w-full sm:w-auto"
           >
-            <Play className="w-3.5 h-3.5 fill-white" />
             <span>Process Payroll Run</span>
-          </button>
+          </SecureActionButton>
         </div>
       </div>
 

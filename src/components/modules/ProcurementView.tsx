@@ -5,12 +5,14 @@ import { DataTable, Column } from '../ui/DataTable.js';
 import { Badge } from '../ui/Badge.js';
 import { Modal } from '../ui/Modal.js';
 import { formatCurrency, formatDate } from '../../lib/i18n.js';
+import { SecureActionButton, AuditorReadonlyBanner } from '../ui/PermissionGate.js';
 
 interface ProcurementViewProps {
   purchaseOrders: PurchaseOrder[];
   suppliers: Supplier[];
   products: Product[];
   onCreatePO: (poData: any) => Promise<void>;
+  currentUser?: any;
 }
 
 export const ProcurementView: React.FC<ProcurementViewProps> = ({
@@ -18,6 +20,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
   suppliers,
   products,
   onCreatePO,
+  currentUser,
 }) => {
   const [activeTab, setActiveTab] = useState<'orders' | 'suppliers'>('orders');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -211,6 +214,9 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Read-Only Auditor Banner */}
+      <AuditorReadonlyBanner currentUser={currentUser} entityName="Purchase Orders and Supplier master records" />
+
       {/* Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
         <div>
@@ -222,13 +228,16 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
           </p>
         </div>
 
-        <button
+        <SecureActionButton
+          id="generate-po-btn"
+          action="procurement:create"
+          currentUser={currentUser}
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-2xs w-full sm:w-auto"
+          icon={Plus}
+          className="w-full sm:w-auto"
         >
-          <Plus className="w-4 h-4" />
           <span>Generate Purchase Order</span>
-        </button>
+        </SecureActionButton>
       </div>
 
       {/* Tabs */}

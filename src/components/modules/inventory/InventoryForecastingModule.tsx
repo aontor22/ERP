@@ -34,15 +34,18 @@ import { api } from '../../../lib/api.js';
 import { InventoryForecastItem, InventoryForecastSummary, StockoutRiskLevel } from '../../../types/erp.js';
 import { Badge } from '../../ui/Badge.js';
 import { formatCurrency } from '../../../lib/i18n.js';
+import { hasPermission, isReadOnlyRole } from '../../../lib/permissions.js';
 
 interface InventoryForecastingModuleProps {
   onRefreshProducts?: () => void;
   onNavigateToProcurement?: () => void;
+  currentUser?: any;
 }
 
 export const InventoryForecastingModule: React.FC<InventoryForecastingModuleProps> = ({
   onRefreshProducts,
   onNavigateToProcurement,
+  currentUser,
 }) => {
   const [summary, setSummary] = useState<InventoryForecastSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -638,25 +641,45 @@ export const InventoryForecastingModule: React.FC<InventoryForecastingModuleProp
 
                       {/* Action buttons */}
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5">
-                        <button
-                          onClick={() => handleApplyThresholds(item)}
-                          disabled={actionLoadingId === item.productId}
-                          title="Apply this suggested ROP to Product Master"
-                          className="px-2.5 py-1.5 text-2xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg transition-colors flex items-center justify-center gap-1"
-                        >
-                          <Check className="w-3 h-3 text-emerald-600" />
-                          Apply ROP
-                        </button>
+                        {isReadOnlyRole(currentUser?.role) ? (
+                          <span
+                            title={`Role ${currentUser?.role || 'Auditor'} has read-only access. Modification of ROP parameters disabled.`}
+                            className="px-2.5 py-1.5 text-2xs font-semibold bg-slate-100 text-slate-400 border border-slate-200 rounded-lg flex items-center justify-center gap-1 cursor-not-allowed"
+                          >
+                            <Check className="w-3 h-3 text-slate-400" />
+                            ROP Locked
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleApplyThresholds(item)}
+                            disabled={actionLoadingId === item.productId}
+                            title="Apply this suggested ROP to Product Master"
+                            className="px-2.5 py-1.5 text-2xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg transition-colors flex items-center justify-center gap-1"
+                          >
+                            <Check className="w-3 h-3 text-emerald-600" />
+                            Apply ROP
+                          </button>
+                        )}
 
-                        <button
-                          onClick={() => handleGeneratePO(item)}
-                          disabled={actionLoadingId === item.productId}
-                          title="Create replenishment Purchase Order"
-                          className="px-3 py-1.5 text-2xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-2xs flex items-center justify-center gap-1"
-                        >
-                          <ShoppingCart className="w-3 h-3" />
-                          Order EOQ
-                        </button>
+                        {isReadOnlyRole(currentUser?.role) ? (
+                          <span
+                            title={`Role ${currentUser?.role || 'Auditor'} has read-only access. Purchase order creation disabled.`}
+                            className="px-3 py-1.5 text-2xs font-semibold bg-slate-100 text-slate-400 border border-slate-200 rounded-lg flex items-center justify-center gap-1 cursor-not-allowed"
+                          >
+                            <ShoppingCart className="w-3 h-3 text-slate-400" />
+                            PO Locked
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleGeneratePO(item)}
+                            disabled={actionLoadingId === item.productId}
+                            title="Create replenishment Purchase Order"
+                            className="px-3 py-1.5 text-2xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-2xs flex items-center justify-center gap-1"
+                          >
+                            <ShoppingCart className="w-3 h-3" />
+                            Order EOQ
+                          </button>
+                        )}
 
                         <button
                           onClick={() => setExpandedItemId(isExpanded ? null : item.productId)}

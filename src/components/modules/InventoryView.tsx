@@ -6,6 +6,7 @@ import { Badge } from '../ui/Badge.js';
 import { Modal } from '../ui/Modal.js';
 import { formatCurrency, formatDate } from '../../lib/i18n.js';
 import { InventoryForecastingModule } from './inventory/InventoryForecastingModule.js';
+import { SecureActionButton, AuditorReadonlyBanner } from '../ui/PermissionGate.js';
 
 interface InventoryViewProps {
   products: Product[];
@@ -14,6 +15,7 @@ interface InventoryViewProps {
   onAdjustStock: (data: { productId: string; warehouseId: string; quantityChange: number; reason: string }) => Promise<void>;
   onRefreshProducts?: () => void;
   onNavigateToProcurement?: () => void;
+  currentUser?: any;
 }
 
 export const InventoryView: React.FC<InventoryViewProps> = ({
@@ -23,6 +25,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   onAdjustStock,
   onRefreshProducts,
   onNavigateToProcurement,
+  currentUser,
 }) => {
   const [activeTab, setActiveTab] = useState<'balances' | 'forecast' | 'ledger'>('balances');
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
@@ -240,6 +243,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Read-Only Auditor Banner */}
+      <AuditorReadonlyBanner currentUser={currentUser} entityName="Inventory balances and Stock Ledger" />
+
       {/* Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
         <div>
@@ -258,12 +264,16 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               {formatCurrency(totalInventoryValuation)}
             </p>
           </div>
-          <button
+          <SecureActionButton
+            id="adjust-stock-btn"
+            action="inventory:adjust"
+            currentUser={currentUser}
             onClick={() => setIsAdjustModalOpen(true)}
-            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-2xs w-full sm:w-auto text-center"
+            icon={Plus}
+            className="w-full sm:w-auto text-center"
           >
             Adjust Stock
-          </button>
+          </SecureActionButton>
         </div>
       </div>
 
@@ -319,6 +329,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         <InventoryForecastingModule
           onRefreshProducts={onRefreshProducts}
           onNavigateToProcurement={onNavigateToProcurement}
+          currentUser={currentUser}
         />
       ) : (
         <DataTable

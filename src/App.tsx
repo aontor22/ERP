@@ -372,6 +372,7 @@ export default function App() {
               <ProductsView
                 products={products}
                 onCreateProduct={handleCreateProduct}
+                currentUser={currentUser}
               />
             )}
 
@@ -383,6 +384,7 @@ export default function App() {
                 onAdjustStock={handleAdjustStock}
                 onRefreshProducts={refreshCore}
                 onNavigateToProcurement={() => setActiveModule('procurement')}
+                currentUser={currentUser}
               />
             )}
 
@@ -392,6 +394,7 @@ export default function App() {
                 suppliers={suppliers}
                 products={products}
                 onCreatePO={handleCreatePO}
+                currentUser={currentUser}
               />
             )}
 
@@ -403,6 +406,7 @@ export default function App() {
                 onCreateInvoice={handleCreateInvoice}
                 baseCurrency={baseCurrency}
                 onBaseCurrencyChange={handleBaseCurrencyChange}
+                currentUser={currentUser}
               />
             )}
 
@@ -423,6 +427,7 @@ export default function App() {
                 onCreateJournal={handleCreateJournal}
                 baseCurrency={baseCurrency}
                 onBaseCurrencyChange={handleBaseCurrencyChange}
+                currentUser={currentUser}
               />
             )}
 
@@ -431,6 +436,7 @@ export default function App() {
                 employees={employees}
                 payrollRuns={payrollRuns}
                 onGeneratePayroll={handleGeneratePayroll}
+                currentUser={currentUser}
               />
             )}
 
@@ -441,6 +447,7 @@ export default function App() {
                 mrpList={mrpList}
                 products={products}
                 onCreateOrder={handleCreateProductionOrder}
+                currentUser={currentUser}
               />
             )}
 
@@ -474,6 +481,7 @@ export default function App() {
                 onUpdateSettings={handleUpdateSettings}
                 theme={theme}
                 onToggleTheme={handleToggleTheme}
+                currentUser={currentUser}
               />
             )}
           </div>

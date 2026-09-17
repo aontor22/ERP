@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { GitPullRequest, CheckCircle2, XCircle, Clock, ShieldCheck, MessageSquare } from 'lucide-react';
+import { GitPullRequest, CheckCircle2, XCircle, Clock, ShieldCheck, MessageSquare, Lock } from 'lucide-react';
 import { ApprovalRequest } from '../../types/erp.js';
 import { DataTable, Column } from '../ui/DataTable.js';
 import { Badge } from '../ui/Badge.js';
 import { Modal } from '../ui/Modal.js';
 import { formatCurrency, formatDate } from '../../lib/i18n.js';
+import { AuditorReadonlyBanner } from '../ui/PermissionGate.js';
+import { hasPermission, isReadOnlyRole } from '../../lib/permissions.js';
 
 interface WorkflowsViewProps {
   requests: ApprovalRequest[];
@@ -89,6 +91,21 @@ export const WorkflowsView: React.FC<WorkflowsViewProps> = ({
             </span>
           );
         }
+
+        const canApprove = hasPermission(currentUser, 'workflows:approve') && !isReadOnlyRole(currentUser?.role);
+
+        if (!canApprove) {
+          return (
+            <span
+              title={`Role ${currentUser?.role || 'Auditor'} does not have authority to approve or reject enterprise workflows.`}
+              className="px-2.5 py-1 bg-slate-100 text-slate-400 rounded text-xs font-medium inline-flex items-center gap-1 cursor-not-allowed"
+            >
+              <Lock className="w-3 h-3 text-slate-400" />
+              <span>Read Only</span>
+            </span>
+          );
+        }
+
         return (
           <button
             onClick={() => {
@@ -126,6 +143,9 @@ export const WorkflowsView: React.FC<WorkflowsViewProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Read-Only Auditor Banner */}
+      <AuditorReadonlyBanner currentUser={currentUser} entityName="Enterprise Approval Workflows and Governance Decisions" />
+
       {/* Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
         <div>

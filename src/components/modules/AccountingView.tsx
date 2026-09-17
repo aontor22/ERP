@@ -28,6 +28,7 @@ import {
   ExchangeRatesData,
 } from '../../lib/currency.js';
 import { ExpenseBudgetManager } from '../accounting/ExpenseBudgetManager.js';
+import { SecureActionButton, AuditorReadonlyBanner } from '../ui/PermissionGate.js';
 
 interface AccountingViewProps {
   accounts: Account[];
@@ -38,6 +39,7 @@ interface AccountingViewProps {
   onCreateJournal: (data: any) => Promise<void>;
   baseCurrency?: string;
   onBaseCurrencyChange?: (curr: string) => void;
+  currentUser?: any;
 }
 
 export const AccountingView: React.FC<AccountingViewProps> = ({
@@ -49,6 +51,7 @@ export const AccountingView: React.FC<AccountingViewProps> = ({
   onCreateJournal,
   baseCurrency: propBaseCurrency,
   onBaseCurrencyChange: propOnBaseCurrencyChange,
+  currentUser,
 }) => {
   const [activeTab, setActiveTab] = useState<'accounts' | 'journals' | 'trialBalance' | 'aging' | 'budgets'>('accounts');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -350,6 +353,9 @@ export const AccountingView: React.FC<AccountingViewProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Read-Only Auditor Banner */}
+      <AuditorReadonlyBanner currentUser={currentUser} entityName="General Ledger accounts, vouchers, and trial balances" />
+
       {/* Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
         <div>
@@ -361,14 +367,16 @@ export const AccountingView: React.FC<AccountingViewProps> = ({
           </p>
         </div>
 
-        <button
+        <SecureActionButton
           id="new-journal-voucher-btn"
+          action="accounting:create_journal"
+          currentUser={currentUser}
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-2xs w-full sm:w-auto"
+          icon={Plus}
+          className="w-full sm:w-auto"
         >
-          <Plus className="w-4 h-4" />
           <span>New Journal Voucher (JV)</span>
-        </button>
+        </SecureActionButton>
       </div>
 
       {/* Multi-Currency & Live Exchange Rates Ticker Bar */}
@@ -653,6 +661,7 @@ export const AccountingView: React.FC<AccountingViewProps> = ({
           initialBudgetsSummary={budgets}
           baseCurrency={baseCurrency}
           onBudgetUpdated={onRefreshBudgets}
+          currentUser={currentUser}
         />
       )}
 

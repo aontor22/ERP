@@ -16,12 +16,14 @@ import {
 } from 'lucide-react';
 import { Badge } from '../ui/Badge.js';
 import { applyTheme, ThemeMode } from '../../lib/theme.js';
+import { SecureActionButton, AuditorReadonlyBanner } from '../ui/PermissionGate.js';
 
 interface SettingsViewProps {
   settings: any;
   onUpdateSettings: (newSettings: any) => Promise<void>;
   theme?: ThemeMode;
   onToggleTheme?: (newTheme?: ThemeMode) => void;
+  currentUser?: any;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -29,6 +31,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onUpdateSettings,
   theme = 'light',
   onToggleTheme,
+  currentUser,
 }) => {
   const [activeTab, setActiveTab] = useState<'tax' | 'rbac' | 'system' | 'appearance'>('appearance');
   const [formData, setFormData] = useState(settings || {});
@@ -99,6 +102,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Read-Only Auditor Banner */}
+      <AuditorReadonlyBanner currentUser={currentUser} entityName="System configurations, NBR parameters, and governance settings" />
+
       {/* Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs transition-colors">
         <div>
@@ -132,13 +138,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             )}
           </button>
 
-          <button
+          <SecureActionButton
+            id="save-settings-btn"
+            action="settings:update"
+            currentUser={currentUser}
             onClick={handleSave}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-2xs w-full sm:w-auto"
+            icon={Save}
+            className="w-full sm:w-auto"
           >
-            <Save className="w-4 h-4" />
             <span>Save System Configurations</span>
-          </button>
+          </SecureActionButton>
         </div>
       </div>
 

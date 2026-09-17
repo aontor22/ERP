@@ -25,6 +25,7 @@ import {
   formatMultiCurrency,
   ExchangeRatesData,
 } from '../../lib/currency.js';
+import { SecureActionButton, AuditorReadonlyBanner } from '../ui/PermissionGate.js';
 
 interface SalesViewProps {
   invoices: SalesInvoice[];
@@ -33,6 +34,7 @@ interface SalesViewProps {
   onCreateInvoice: (data: any) => Promise<void>;
   baseCurrency?: string;
   onBaseCurrencyChange?: (curr: string) => void;
+  currentUser?: any;
 }
 
 export const SalesView: React.FC<SalesViewProps> = ({
@@ -42,6 +44,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
   onCreateInvoice,
   baseCurrency: propBaseCurrency,
   onBaseCurrencyChange: propOnBaseCurrencyChange,
+  currentUser,
 }) => {
   const [activeTab, setActiveTab] = useState<'invoices' | 'customers'>('invoices');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -384,6 +387,9 @@ export const SalesView: React.FC<SalesViewProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Read-Only Auditor Banner */}
+      <AuditorReadonlyBanner currentUser={currentUser} entityName="Sales invoices and Accounts Receivable balances" />
+
       {/* Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
         <div>
@@ -395,13 +401,16 @@ export const SalesView: React.FC<SalesViewProps> = ({
           </p>
         </div>
 
-        <button
+        <SecureActionButton
+          id="issue-invoice-btn"
+          action="sales:create_invoice"
+          currentUser={currentUser}
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-2xs w-full sm:w-auto"
+          icon={Plus}
+          className="w-full sm:w-auto"
         >
-          <Plus className="w-4 h-4" />
           <span>Issue Sales Invoice</span>
-        </button>
+        </SecureActionButton>
       </div>
 
       {/* Multi-Currency Ticker & FX Bar */}
