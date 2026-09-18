@@ -42,6 +42,7 @@ interface KpiDetailDrilldownProps {
   totalGrossPayroll: number;
   totalPayrollTds: number;
   totalStockUnits: number;
+  dateRangeLabel?: string;
 }
 
 export const KpiDetailDrilldown: React.FC<KpiDetailDrilldownProps> = ({
@@ -61,6 +62,7 @@ export const KpiDetailDrilldown: React.FC<KpiDetailDrilldownProps> = ({
   totalGrossPayroll,
   totalPayrollTds,
   totalStockUnits,
+  dateRangeLabel,
 }) => {
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
   const [searchQuery, setSearchQuery] = useState('');
@@ -412,6 +414,11 @@ export const KpiDetailDrilldown: React.FC<KpiDetailDrilldownProps> = ({
               <span className={`text-3xs font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${config.badgeBg} print:text-black print:border-slate-400`}>
                 Interactive Drill-Down
               </span>
+              {dateRangeLabel && (
+                <span className="text-3xs font-medium px-2 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-mono">
+                  📅 {dateRangeLabel}
+                </span>
+              )}
               <span className="text-3xs font-mono text-slate-500 dark:text-slate-400 print:text-slate-700">
                 {config.totalLabel}: <strong className="text-slate-900 dark:text-white print:text-black">{config.totalValue}</strong>
               </span>
@@ -960,6 +967,7 @@ export const KpiDetailDrilldown: React.FC<KpiDetailDrilldownProps> = ({
               products={products}
               title="Inventory Asset Valuation & Turnover Horizon"
               subtitle="Recharts Bar Chart — filtered to isolate category-level valuation and stock turnover velocity"
+              dateRangeLabel={dateRangeLabel}
               height={300}
               showControls={true}
               activeMetricFilter="value_vs_turnover"
@@ -970,6 +978,7 @@ export const KpiDetailDrilldown: React.FC<KpiDetailDrilldownProps> = ({
               invoices={invoices}
               title={`Monthly ${config.totalLabel} Performance Trajectory`}
               subtitle={`Recharts Trendline — filtered to focus exclusively on ${config.totalLabel.toLowerCase()}`}
+              dateRangeLabel={dateRangeLabel}
               height={300}
               showControls={true}
               activeMetricFilter={config.chartMetricFilter}

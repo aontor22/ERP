@@ -40,6 +40,7 @@ interface MonthlyRevenueTrendsChartProps {
   invoices?: any[];
   title?: string;
   subtitle?: string;
+  dateRangeLabel?: string;
   height?: number;
   showControls?: boolean;
   activeMetricFilter?: 'all' | 'revenue_profit' | 'revenue_expenses' | 'revenue_only';
@@ -66,6 +67,7 @@ export const MonthlyRevenueTrendsChart: React.FC<MonthlyRevenueTrendsChartProps>
   invoices = [],
   title = 'Monthly Revenue Performance Trends',
   subtitle = '12-month audited operating revenue trajectory, net profit margin, and growth velocity',
+  dateRangeLabel,
   height = 320,
   showControls = true,
   activeMetricFilter,
@@ -87,10 +89,10 @@ export const MonthlyRevenueTrendsChart: React.FC<MonthlyRevenueTrendsChartProps>
   const chartData = useMemo(() => {
     const baseSource = (data && data.length > 0) ? data : DEFAULT_12M_TRENDS;
     
-    // Slice based on time range
+    // Slice based on time range only if dataset is larger than the requested slice
     let sliced = [...baseSource];
-    if (timeRange === '3m') sliced = baseSource.slice(-3);
-    else if (timeRange === '6m') sliced = baseSource.slice(-6);
+    if (timeRange === '3m' && baseSource.length > 3) sliced = baseSource.slice(-3);
+    else if (timeRange === '6m' && baseSource.length > 6) sliced = baseSource.slice(-6);
 
     // Compute average revenue to provide benchmark target line
     const avgRev = sliced.reduce((acc, curr) => acc + (curr.revenue || 0), 0) / (sliced.length || 1);
@@ -226,7 +228,7 @@ export const MonthlyRevenueTrendsChart: React.FC<MonthlyRevenueTrendsChartProps>
       {/* Chart Header & Action Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">
               {title}
@@ -234,6 +236,11 @@ export const MonthlyRevenueTrendsChart: React.FC<MonthlyRevenueTrendsChartProps>
             <span className="text-3xs font-semibold px-2 py-0.5 bg-blue-50 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200 dark:border-blue-900/50 rounded">
               Line Visualization
             </span>
+            {dateRangeLabel && (
+              <span className="text-3xs font-medium px-2 py-0.5 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded font-mono">
+                📅 {dateRangeLabel}
+              </span>
+            )}
           </div>
           <p className="text-2xs text-slate-500 dark:text-slate-400 mt-0.5">
             {subtitle}

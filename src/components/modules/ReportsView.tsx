@@ -20,6 +20,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Wallet,
+  CalendarRange,
 } from 'lucide-react';
 import { formatCurrency } from '../../lib/i18n.js';
 import { exportToCSV } from '../../lib/csvExport.js';
@@ -27,6 +28,13 @@ import { generateReportPDF, PDFSummaryCard } from '../../lib/pdfExport.js';
 import { MonthlyRevenueTrendsChart } from '../reports/MonthlyRevenueTrendsChart.js';
 import { InventoryTurnoverChart } from '../reports/InventoryTurnoverChart.js';
 import { KpiDetailDrilldown, KpiMetricType } from '../reports/KpiDetailDrilldown.js';
+import {
+  ReportDateRangePicker,
+  DateRange,
+  getPresetDateRange,
+  isDateInDateRange,
+  filterMonthlyTrendsByDateRange,
+} from '../reports/ReportDateRangePicker.js';
 
 interface ReportsViewProps {
   stats: any;
@@ -51,6 +59,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 }) => {
   const [reportType, setReportType] = useState<ReportType>('financial');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange>(() => getPresetDateRange('all'));
   const [showInlineRevenueChart, setShowInlineRevenueChart] = useState(true);
   const [showInlineTurnoverChart, setShowInlineTurnoverChart] = useState(true);
   const [selectedKpi, setSelectedKpi] = useState<KpiMetricType | null>(null);
@@ -67,7 +76,19 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
   const dateStamp = new Date().toISOString().split('T')[0];
 
-  // 1. Data calculations
+  // 1. Period Filtering based on selected Date Range
+  const periodInvoices = useMemo(() => {
+    return invoices.filter((i) => {
+      const invDate = i.invoiceDate || i.date;
+      return isDateInDateRange(invDate, dateRange);
+    });
+  }, [invoices, dateRange]);
+
+  const periodMonthlyTrends = useMemo(() => {
+    return filterMonthlyTrendsByDateRange(stats?.monthlyTrends, dateRange);
+  }, [stats?.monthlyTrends, dateRange]);
+
+  // 2. Data calculations
   const trialBalance: any[] = reports?.trialBalance || [];
   const totalDebits = useMemo(
     () => trialBalance.reduce((sum, r) => sum + (Number(r.debit) || 0), 0),
@@ -79,16 +100,16 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   );
 
   const totalRevenue = useMemo(
-    () => invoices.reduce((sum, i) => sum + (i.status !== 'Draft' ? Number(i.subTotal) || 0 : 0), 0),
-    [invoices]
+    () => periodInvoices.reduce((sum, i) => sum + (i.status !== 'Draft' ? Number(i.subTotal) || 0 : 0), 0),
+    [periodInvoices]
   );
   const totalVat = useMemo(
-    () => invoices.reduce((sum, i) => sum + (i.status !== 'Draft' ? Number(i.taxTotal) || 0 : 0), 0),
-    [invoices]
+    () => periodInvoices.reduce((sum, i) => sum + (i.status !== 'Draft' ? Number(i.taxTotal) || 0 : 0), 0),
+    [periodInvoices]
   );
   const totalInvoiceGross = useMemo(
-    () => invoices.reduce((sum, i) => sum + (i.status !== 'Draft' ? Number(i.grandTotal) || 0 : 0), 0),
-    [invoices]
+    () => periodInvoices.reduce((sum, i) => sum + (i.status !== 'Draft' ? Number(i.grandTotal) || 0 : 0), 0),
+    [periodInvoices]
   );
 
   const totalInventoryValuation = useMemo(
@@ -113,25 +134,29 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     [employees]
   );
 
-  // Top-Level Executive KPI metrics
+  // Top-Level Executive KPI metrics (filtered dynamically by active date range)
   const effectiveRevenue = useMemo(() => {
-    if (stats?.revenue && Number(stats.revenue) > 0) return Number(stats.revenue);
-    if (totalRevenue > 0) return totalRevenue;
-    const trends = stats?.monthlyTrends;
-    if (trends && trends.length > 0) {
-      return trends.reduce((acc: number, t: any) => acc + (t.revenue || 0), 0);
+    if (dateRange.preset === 'all') {
+      if (stats?.revenue && Number(stats.revenue) > 0) return Number(stats.revenue);
     }
+    if (periodMonthlyTrends && periodMonthlyTrends.length > 0) {
+      const trendRev = periodMonthlyTrends.reduce((acc: number, t: any) => acc + (t.revenue || 0), 0);
+      if (trendRev > 0) return trendRev;
+    }
+    if (totalRevenue > 0) return totalRevenue;
     return 0;
-  }, [stats, totalRevenue]);
+  }, [stats, totalRevenue, periodMonthlyTrends, dateRange.preset]);
 
   const effectiveExpenses = useMemo(() => {
-    if (stats?.expenses && Number(stats.expenses) > 0) return Number(stats.expenses);
-    const trends = stats?.monthlyTrends;
-    if (trends && trends.length > 0) {
-      return trends.reduce((acc: number, t: any) => acc + (t.expenses || 0), 0);
+    if (dateRange.preset === 'all') {
+      if (stats?.expenses && Number(stats.expenses) > 0) return Number(stats.expenses);
+    }
+    if (periodMonthlyTrends && periodMonthlyTrends.length > 0) {
+      const trendExp = periodMonthlyTrends.reduce((acc: number, t: any) => acc + (t.expenses || 0), 0);
+      if (trendExp > 0) return trendExp;
     }
     return totalGrossPayroll > 0 ? totalGrossPayroll : 0;
-  }, [stats, totalGrossPayroll]);
+  }, [stats, totalGrossPayroll, periodMonthlyTrends, dateRange.preset]);
 
   const effectiveInventoryValue = useMemo(() => {
     if (totalInventoryValuation > 0) return totalInventoryValuation;
@@ -140,18 +165,18 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   }, [totalInventoryValuation, stats]);
 
   const effectiveNetProfit = useMemo(() => {
-    if (stats?.netProfit !== undefined && stats?.netProfit !== null && !isNaN(Number(stats.netProfit))) {
+    if (dateRange.preset === 'all' && stats?.netProfit !== undefined && stats?.netProfit !== null && !isNaN(Number(stats.netProfit))) {
       return Number(stats.netProfit);
     }
     return effectiveRevenue - effectiveExpenses;
-  }, [stats, effectiveRevenue, effectiveExpenses]);
+  }, [stats, effectiveRevenue, effectiveExpenses, dateRange.preset]);
 
   const netMarginPercent = useMemo(() => {
     if (effectiveRevenue <= 0) return 0;
     return Number(((effectiveNetProfit / effectiveRevenue) * 100).toFixed(1));
   }, [effectiveNetProfit, effectiveRevenue]);
 
-  // 2. Filtered data based on search
+  // 3. Filtered data based on search and active period
   const filteredTrialBalance = useMemo(() => {
     if (!searchQuery.trim()) return trialBalance;
     const q = searchQuery.toLowerCase();
@@ -164,15 +189,15 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   }, [trialBalance, searchQuery]);
 
   const filteredInvoices = useMemo(() => {
-    if (!searchQuery.trim()) return invoices;
+    if (!searchQuery.trim()) return periodInvoices;
     const q = searchQuery.toLowerCase();
-    return invoices.filter(
+    return periodInvoices.filter(
       (i) =>
         i.invoiceNumber?.toLowerCase().includes(q) ||
         i.customerName?.toLowerCase().includes(q) ||
         i.status?.toLowerCase().includes(q)
     );
-  }, [invoices, searchQuery]);
+  }, [periodInvoices, searchQuery]);
 
   const filteredProducts = useMemo(() => {
     if (!searchQuery.trim()) return products;
@@ -288,7 +313,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       setExportFeedback({ type: 'csv', filename, timestamp });
     } else if (reportType === 'analytics') {
       const filename = `apex-bi-trends-turnover-${dateStamp}.csv`;
-      const monthlyData = stats?.monthlyTrends || [];
+      const monthlyData = periodMonthlyTrends && periodMonthlyTrends.length > 0 ? periodMonthlyTrends : stats?.monthlyTrends || [];
       exportToCSV(
         filename,
         [
@@ -303,7 +328,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         monthlyData,
         {
           companyName,
-          reportTitle: 'Executive Financial Trajectory & Inventory Turnover Analytics',
+          reportTitle: `Executive Financial Trajectory & Inventory Turnover Analytics (${dateRange.label})`,
           generatedAt: `${dateStamp} ${timestamp}`,
         }
       );
@@ -498,19 +523,19 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       setExportFeedback({ type: 'pdf', filename, timestamp });
     } else if (reportType === 'analytics') {
       const filename = `apex-bi-trends-turnover-${dateStamp}.pdf`;
-      const monthlyData = stats?.monthlyTrends || [];
+      const monthlyData = periodMonthlyTrends && periodMonthlyTrends.length > 0 ? periodMonthlyTrends : stats?.monthlyTrends || [];
       const totalRev = monthlyData.reduce((sum: number, m: any) => sum + (m.revenue || 0), 0);
       const totalProf = monthlyData.reduce((sum: number, m: any) => sum + (m.profit || 0), 0);
       const summaryCards: PDFSummaryCard[] = [
         { label: 'Cumulative Period Revenue', value: formatCurrency(totalRev) },
         { label: 'Cumulative Net Profit', value: formatCurrency(totalProf) },
         { label: 'Total Inventory Valuation', value: formatCurrency(totalInventoryValuation) },
-        { label: 'Reporting Horizon', value: `${monthlyData.length} Months Audited` },
+        { label: 'Reporting Horizon', value: `${dateRange.label} (${monthlyData.length} Months)` },
       ];
 
       generateReportPDF({
         title: 'Executive Financial Trajectory & Turnover Analytics',
-        subtitle: '12-Month Audited Operating Revenue Trends & Material Turnover Velocity',
+        subtitle: `${dateRange.label} (${dateRange.startDate} to ${dateRange.endDate}) Audited Revenue Trends & Material Velocity`,
         companyName,
         companyTaxId,
         companyAddress,
@@ -714,6 +739,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
             </div>
             <div className="text-3xs text-slate-700 font-mono">
+              Reporting Period: <strong>{dateRange.label} ({dateRange.startDate} to {dateRange.endDate})</strong>
+            </div>
+            <div className="text-3xs text-slate-700 font-mono">
               Currency: BDT (Bangladeshi Taka)
             </div>
           </div>
@@ -731,6 +759,39 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             <div>Prepared By: <strong>{preparedBy}</strong></div>
           </div>
         </div>
+      </div>
+
+      {/* Date Range Control Bar & Active Filter Status */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-slate-50/80 dark:bg-slate-900/60 rounded-xl border border-slate-200/80 dark:border-slate-800 print:hidden transition-colors">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-blue-100/80 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0">
+            <CalendarRange className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                Reporting Period:
+              </span>
+              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                {dateRange.label}
+              </span>
+              {dateRange.preset !== 'all' && (
+                <span className="text-3xs font-mono px-2 py-0.5 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800">
+                  {dateRange.startDate} → {dateRange.endDate}
+                </span>
+              )}
+            </div>
+            <p className="text-2xs text-slate-500 dark:text-slate-400">
+              Filter applies across executive KPI cards, monthly revenue charts, VAT returns, and audit tables
+            </p>
+          </div>
+        </div>
+
+        <ReportDateRangePicker
+          value={dateRange}
+          onChange={setDateRange}
+          className="w-full sm:w-auto"
+        />
       </div>
 
       {/* Top-Level Executive Summary KPI Cards - Responsive, Interactive & Print-Friendly */}
@@ -775,11 +836,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </div>
           <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 print:border-slate-300 print:text-black">
             <span className="truncate">
-              {selectedKpi === 'revenue' ? 'Active Detail View' : 'Audited Inflow'}
+              {selectedKpi === 'revenue' ? 'Active Detail View' : dateRange.preset === 'all' ? 'Audited Inflow' : dateRange.label}
             </span>
             <span className="inline-flex items-center gap-0.5 font-semibold text-emerald-600 dark:text-emerald-400 print:text-black">
               <ArrowUpRight className="w-3 h-3 print:hidden" />
-              <span>{invoices.length} Invoices</span>
+              <span>{periodInvoices.length} Invoices</span>
             </span>
           </div>
         </div>
@@ -821,7 +882,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </div>
           <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 print:border-slate-300 print:text-black">
             <span className="truncate">
-              {selectedKpi === 'expenses' ? 'Active Detail View' : 'COGS & Overheads'}
+              {selectedKpi === 'expenses' ? 'Active Detail View' : dateRange.preset === 'all' ? 'COGS & Overheads' : dateRange.label}
             </span>
             <span className="font-semibold text-rose-600 dark:text-rose-400 print:text-black">
               Operational Cost
@@ -917,7 +978,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </div>
           <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 print:border-slate-300 print:text-black">
             <span className="truncate">
-              {selectedKpi === 'profit' ? 'Active Detail View' : 'Operating Margin'}
+              {selectedKpi === 'profit' ? 'Active Detail View' : dateRange.preset === 'all' ? 'Operating Margin' : dateRange.label}
             </span>
             <span className={`font-semibold print:text-black ${
               effectiveNetProfit >= 0
@@ -939,10 +1000,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             setReportType(targetTab);
             setSearchQuery('');
           }}
-          invoices={invoices}
+          invoices={periodInvoices}
           products={products}
           employees={employees}
-          stats={stats}
+          stats={{ ...stats, monthlyTrends: periodMonthlyTrends }}
           effectiveRevenue={effectiveRevenue}
           effectiveExpenses={effectiveExpenses}
           effectiveInventoryValue={effectiveInventoryValue}
@@ -952,6 +1013,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           totalGrossPayroll={totalGrossPayroll}
           totalPayrollTds={totalPayrollTds}
           totalStockUnits={totalStockUnits}
+          dateRangeLabel={dateRange.label}
         />
       )}
 
@@ -1117,10 +1179,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             </div>
             {showInlineRevenueChart && (
               <MonthlyRevenueTrendsChart
-                data={stats?.monthlyTrends}
-                invoices={invoices}
+                data={periodMonthlyTrends}
+                invoices={periodInvoices}
                 title="Monthly Operating Revenue & Net Margin Trends"
-                subtitle="Visualized with Recharts — audited 12-month trajectory, net profit margin, and growth velocity"
+                subtitle={`Visualized with Recharts — ${dateRange.label} (${dateRange.startDate} to ${dateRange.endDate})`}
+                dateRangeLabel={dateRange.label}
                 height={280}
                 activeMetricFilter={
                   selectedKpi === 'revenue'
@@ -1370,7 +1433,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               <InventoryTurnoverChart
                 products={products}
                 title="Category Inventory Turnover & Working Capital Velocity"
-                subtitle="Visualized with Recharts — category annual turnover ratios, days sales of inventory (DSI), and velocity ratings"
+                subtitle={`Visualized with Recharts — category turnover ratios & velocity ratings (${dateRange.label})`}
+                dateRangeLabel={dateRange.label}
                 height={280}
                 activeMetricFilter={selectedKpi === 'inventory' ? 'value_vs_turnover' : undefined}
               />
@@ -1619,10 +1683,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           {/* Recharts Chart 1: Monthly Revenue Trajectory (Line Chart) */}
           <div className="print:break-inside-avoid">
             <MonthlyRevenueTrendsChart
-              data={stats?.monthlyTrends}
-              invoices={invoices}
-              title="12-Month Audited Operating Revenue Trajectory"
-              subtitle="Recharts Line Visualization — monthly operating revenue, audited net profit, and MoM velocity"
+              data={periodMonthlyTrends}
+              invoices={periodInvoices}
+              title={`${dateRange.preset === 'all' ? '12-Month' : dateRange.label} Audited Operating Revenue Trajectory`}
+              subtitle={`Recharts Line Visualization — ${dateRange.label} (${dateRange.startDate} to ${dateRange.endDate}) operating revenue, audited net profit, and MoM velocity`}
+              dateRangeLabel={dateRange.label}
               height={320}
               showControls={true}
               activeMetricFilter={
@@ -1642,7 +1707,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             <InventoryTurnoverChart
               products={products}
               title="Perpetual Material Stock Turnover & Holding Days by Category"
-              subtitle="Recharts Bar Visualization — category-level turnover ratio (turns/yr), holding days (DSI), and working capital rating"
+              subtitle={`Recharts Bar Visualization — category-level turnover ratio (turns/yr), holding days (DSI), and working capital rating (${dateRange.label})`}
+              dateRangeLabel={dateRange.label}
               height={320}
               showControls={true}
               activeMetricFilter={selectedKpi === 'inventory' ? 'value_vs_turnover' : undefined}

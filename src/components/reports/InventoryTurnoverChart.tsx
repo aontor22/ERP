@@ -41,6 +41,7 @@ interface InventoryTurnoverChartProps {
   products?: any[];
   title?: string;
   subtitle?: string;
+  dateRangeLabel?: string;
   height?: number;
   showControls?: boolean;
   activeMetricFilter?: 'turnover' | 'days' | 'value_vs_turnover';
@@ -60,6 +61,7 @@ export const InventoryTurnoverChart: React.FC<InventoryTurnoverChartProps> = ({
   products = [],
   title = 'Inventory Turnover & Asset Velocity Metrics',
   subtitle = 'Category-level inventory turnover ratios, days sales of inventory (DSI), and working capital velocity',
+  dateRangeLabel,
   height = 320,
   showControls = true,
   activeMetricFilter,
@@ -298,7 +300,7 @@ export const InventoryTurnoverChart: React.FC<InventoryTurnoverChartProps> = ({
       {/* Header & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <RotateCw className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">
               {title}
@@ -306,6 +308,11 @@ export const InventoryTurnoverChart: React.FC<InventoryTurnoverChartProps> = ({
             <span className="text-3xs font-semibold px-2 py-0.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50 rounded">
               Bar Visualization
             </span>
+            {dateRangeLabel && (
+              <span className="text-3xs font-medium px-2 py-0.5 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded font-mono">
+                📅 {dateRangeLabel}
+              </span>
+            )}
           </div>
           <p className="text-2xs text-slate-500 dark:text-slate-400 mt-0.5">
             {subtitle}
