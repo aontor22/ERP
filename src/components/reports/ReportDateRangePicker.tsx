@@ -70,6 +70,88 @@ export function getPresetDateRange(preset: DateRangePreset, anchorDateStr?: stri
   }
 }
 
+export interface PreviousPeriodInfo {
+  startDate: string;
+  endDate: string;
+  label: string;
+  shortLabel: string;
+  periodType: 'MoM' | 'QoQ' | 'YoY' | 'Prior Period';
+}
+
+// Compute the preceding comparison window based on the active date range
+export function getPreviousDateRange(range: DateRange): PreviousPeriodInfo {
+  const currentStart = new Date(range.startDate);
+  const currentEnd = new Date(range.endDate);
+
+  if (range.preset === 'last30') {
+    const prevEnd = new Date(currentStart);
+    prevEnd.setDate(prevEnd.getDate() - 1);
+    const prevStart = new Date(prevEnd);
+    prevStart.setDate(prevStart.getDate() - 29);
+    return {
+      startDate: prevStart.toISOString().split('T')[0],
+      endDate: prevEnd.toISOString().split('T')[0],
+      label: 'Prior 30 Days',
+      shortLabel: 'Prior 30D',
+      periodType: 'MoM',
+    };
+  }
+
+  if (range.preset === 'last90') {
+    const prevEnd = new Date(currentStart);
+    prevEnd.setDate(prevEnd.getDate() - 1);
+    const prevStart = new Date(prevEnd);
+    prevStart.setDate(prevStart.getDate() - 89);
+    return {
+      startDate: prevStart.toISOString().split('T')[0],
+      endDate: prevEnd.toISOString().split('T')[0],
+      label: 'Prior 90 Days',
+      shortLabel: 'Prior 90D',
+      periodType: 'QoQ',
+    };
+  }
+
+  if (range.preset === 'ytd') {
+    const prevStartYear = currentStart.getFullYear() - 1;
+    const prevStart = new Date(currentStart);
+    prevStart.setFullYear(prevStartYear);
+    const prevEnd = new Date(currentEnd);
+    prevEnd.setFullYear(currentEnd.getFullYear() - 1);
+    return {
+      startDate: prevStart.toISOString().split('T')[0],
+      endDate: prevEnd.toISOString().split('T')[0],
+      label: `Same Period ${prevStartYear} (YoY)`,
+      shortLabel: `YoY (${prevStartYear})`,
+      periodType: 'YoY',
+    };
+  }
+
+  if (range.preset === 'all') {
+    return {
+      startDate: '2024-10-01',
+      endDate: '2025-09-30',
+      label: 'Prior Fiscal Year (FY24-25)',
+      shortLabel: 'FY24-25',
+      periodType: 'YoY',
+    };
+  }
+
+  // Custom date range: calculate exact duration in days
+  const diffTime = Math.abs(currentEnd.getTime() - currentStart.getTime());
+  const diffDays = Math.max(1, Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1);
+  const prevEnd = new Date(currentStart);
+  prevEnd.setDate(prevEnd.getDate() - 1);
+  const prevStart = new Date(prevEnd);
+  prevStart.setDate(prevStart.getDate() - (diffDays - 1));
+  return {
+    startDate: prevStart.toISOString().split('T')[0],
+    endDate: prevEnd.toISOString().split('T')[0],
+    label: `Prior ${diffDays} Days`,
+    shortLabel: `Prior ${diffDays}D`,
+    periodType: 'Prior Period',
+  };
+}
+
 // Map month name abbreviation to 2-digit month string
 const MONTH_ABBR_MAP: Record<string, string> = {
   jan: '01',
