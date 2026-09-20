@@ -472,6 +472,7 @@ export default function App() {
                 employees={employees}
                 currentCompany={currentCompany}
                 currentUser={currentUser}
+                companies={companies}
               />
             )}
 

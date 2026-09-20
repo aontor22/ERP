@@ -21,6 +21,8 @@ import {
   ArrowDownRight,
   Wallet,
   CalendarRange,
+  Bookmark,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { formatCurrency } from '../../lib/i18n.js';
 import { exportToCSV } from '../../lib/csvExport.js';
@@ -37,6 +39,20 @@ import {
   isDateInDateRange,
   filterMonthlyTrendsByDateRange,
 } from '../reports/ReportDateRangePicker.js';
+import { EntitySegmentPicker } from '../reports/EntitySegmentPicker.js';
+import { ReportPresetsBar } from '../reports/ReportPresetsBar.js';
+import { ReportPresetsModal } from '../reports/ReportPresetsModal.js';
+import {
+  ReportPreset,
+  EntitySegmentFilter,
+  DEFAULT_ENTITY_SEGMENT,
+  loadAllReportPresets,
+  saveUserReportPresets,
+  getActivePresetIdFromStorage,
+  saveActivePresetIdToStorage,
+  BUILTIN_REPORT_PRESETS,
+  ENTITY_OPTIONS,
+} from '../reports/reportPresets.js';
 
 interface ReportsViewProps {
   stats: any;
@@ -46,6 +62,7 @@ interface ReportsViewProps {
   employees: any[];
   currentCompany?: any;
   currentUser?: any;
+  companies?: any[];
 }
 
 type ReportType = 'financial' | 'sales' | 'inventory' | 'payroll' | 'analytics';
@@ -58,10 +75,37 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   employees = [],
   currentCompany,
   currentUser,
+  companies = [],
 }) => {
   const [reportType, setReportType] = useState<ReportType>('financial');
   const [searchQuery, setSearchQuery] = useState('');
-  const [dateRange, setDateRange] = useState<DateRange>(() => getPresetDateRange('all'));
+
+  // Report Presets & Entity Segment State (Persisted in localStorage)
+  const [presets, setPresets] = useState<ReportPreset[]>(() => loadAllReportPresets());
+  const [activePresetId, setActivePresetId] = useState<string | null>(() => {
+    const storedActive = getActivePresetIdFromStorage();
+    if (storedActive) return storedActive;
+    const defaultPreset = loadAllReportPresets().find((p) => p.isDefault);
+    return defaultPreset ? defaultPreset.id : null;
+  });
+
+  const [entitySegment, setEntitySegment] = useState<EntitySegmentFilter>(() => {
+    const all = loadAllReportPresets();
+    const storedActiveId = getActivePresetIdFromStorage();
+    const found = all.find((p) => p.id === storedActiveId) || all.find((p) => p.isDefault);
+    return found ? found.entitySegment : DEFAULT_ENTITY_SEGMENT;
+  });
+
+  const [dateRange, setDateRange] = useState<DateRange>(() => {
+    const all = loadAllReportPresets();
+    const storedActiveId = getActivePresetIdFromStorage();
+    const found = all.find((p) => p.id === storedActiveId) || all.find((p) => p.isDefault);
+    return found ? found.dateRange : getPresetDateRange('all');
+  });
+
+  const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
+  const [presetModalInitialTab, setPresetModalInitialTab] = useState<'save' | 'manage'>('save');
+
   const [showInlineRevenueChart, setShowInlineRevenueChart] = useState(true);
   const [showInlineTurnoverChart, setShowInlineTurnoverChart] = useState(true);
   const [selectedKpi, setSelectedKpi] = useState<KpiMetricType | null>(null);
@@ -71,26 +115,240 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     timestamp: string;
   } | null>(null);
 
-  const companyName = currentCompany?.name || 'Apex Industrial Holdings Ltd.';
-  const companyTaxId = currentCompany?.taxId || 'BIN: 001928472-0101';
+  // Active preset reference
+  const activePreset = useMemo(() => {
+    return presets.find((p) => p.id === activePresetId) || null;
+  }, [presets, activePresetId]);
+
+  // Preset Handlers
+  const handleSelectPreset = (preset: ReportPreset) => {
+    setActivePresetId(preset.id);
+    saveActivePresetIdToStorage(preset.id);
+    setDateRange(preset.dateRange);
+    setEntitySegment(preset.entitySegment);
+    if (preset.reportType) {
+      setReportType(preset.reportType);
+    }
+  };
+
+  const handleSaveNewPreset = (presetData: {
+    name: string;
+    description: string;
+    isDefault: boolean;
+  }) => {
+    const newPreset: ReportPreset = {
+      id: `preset-usr-${Date.now()}`,
+      name: presetData.name,
+      description: presetData.description,
+      isSystem: false,
+      isDefault: presetData.isDefault,
+      createdAt: new Date().toISOString(),
+      dateRange: { ...dateRange },
+      entitySegment: { ...entitySegment },
+      reportType,
+    };
+
+    let updatedPresets = [...presets];
+    if (presetData.isDefault) {
+      updatedPresets = updatedPresets.map((p) => ({ ...p, isDefault: false }));
+    }
+    updatedPresets = [newPreset, ...updatedPresets];
+    setPresets(updatedPresets);
+    saveUserReportPresets(updatedPresets);
+    setActivePresetId(newPreset.id);
+    saveActivePresetIdToStorage(newPreset.id);
+  };
+
+  const handleDeletePreset = (presetId: string) => {
+    const updatedPresets = presets.filter((p) => p.id !== presetId);
+    setPresets(updatedPresets);
+    saveUserReportPresets(updatedPresets);
+    if (activePresetId === presetId) {
+      const fallback = updatedPresets.find((p) => p.isDefault) || updatedPresets[0];
+      if (fallback) {
+        handleSelectPreset(fallback);
+      } else {
+        setActivePresetId(null);
+        saveActivePresetIdToStorage(null);
+      }
+    }
+  };
+
+  const handleSetDefaultPreset = (presetId: string) => {
+    const updatedPresets = presets.map((p) => ({
+      ...p,
+      isDefault: p.id === presetId,
+    }));
+    setPresets(updatedPresets);
+    saveUserReportPresets(updatedPresets);
+  };
+
+  const handleResetToDefaults = () => {
+    localStorage.removeItem('erp_report_presets_v1');
+    const defaults = BUILTIN_REPORT_PRESETS;
+    setPresets(defaults);
+    const defaultPreset = defaults.find((p) => p.isDefault) || defaults[0];
+    handleSelectPreset(defaultPreset);
+  };
+
+  const handleRevertToActivePreset = () => {
+    const active = presets.find((p) => p.id === activePresetId);
+    if (active) {
+      setDateRange(active.dateRange);
+      setEntitySegment(active.entitySegment);
+      if (active.reportType) {
+        setReportType(active.reportType);
+      }
+    }
+  };
+
+  const handleOpenSavePresetModal = () => {
+    setPresetModalInitialTab('save');
+    setIsPresetModalOpen(true);
+  };
+
+  const handleOpenManagePresetModal = () => {
+    setPresetModalInitialTab('manage');
+    setIsPresetModalOpen(true);
+  };
+
+  // Dynamic company metadata based on active entity segment
+  const activeEntityOption = ENTITY_OPTIONS.find((e) => e.id === entitySegment.entityId);
+  const companyName = activeEntityOption && activeEntityOption.id !== 'all'
+    ? activeEntityOption.name
+    : (currentCompany?.name || 'Apex Group Holdings Ltd. & Subsidiaries (Consolidated)');
+  const companyTaxId = activeEntityOption && activeEntityOption.id !== 'all'
+    ? activeEntityOption.taxId
+    : (currentCompany?.taxId || 'NBR Multi-Entity Group TIN: 481920481-01');
   const companyAddress = 'Motijheel Commercial Area, Dhaka-1000, Bangladesh';
   const preparedBy = `${currentUser?.name || 'Authorized Auditor'} (${currentUser?.role || 'CFO'})`;
 
   const dateStamp = new Date().toISOString().split('T')[0];
 
-  // 1. Period Filtering based on selected Date Range
-  const periodInvoices = useMemo(() => {
+  // 1. Entity and Operational Segment Filtering for Invoices
+  const segmentFilteredInvoices = useMemo(() => {
+    if (entitySegment.entityId === 'all' && entitySegment.segmentId === 'all') {
+      return invoices;
+    }
     return invoices.filter((i) => {
+      // 1. Legal Entity check
+      if (entitySegment.entityId !== 'all') {
+        if (i.companyId && i.companyId !== entitySegment.entityId) {
+          return false;
+        }
+      }
+      // 2. Operational Division check
+      if (entitySegment.segmentId !== 'all') {
+        if (entitySegment.segmentId === 'export-commercial') {
+          const isExport = i.currency !== 'BDT' ||
+            i.customerName?.toLowerCase().includes('inditex') ||
+            i.customerName?.toLowerCase().includes('zara') ||
+            i.customerName?.toLowerCase().includes('h&m');
+          if (!isExport) return false;
+        } else if (entitySegment.segmentId === 'textile-mfg') {
+          const hasTextile = !i.items || i.items.some((item: any) =>
+            item.productName?.toLowerCase().includes('shirt') ||
+            item.productName?.toLowerCase().includes('hoodie') ||
+            item.productName?.toLowerCase().includes('dye') ||
+            item.productName?.toLowerCase().includes('yarn')
+          );
+          if (!hasTextile) return false;
+        }
+      }
+      return true;
+    });
+  }, [invoices, entitySegment]);
+
+  // 2. Period Filtering based on selected Date Range
+  const periodInvoices = useMemo(() => {
+    return segmentFilteredInvoices.filter((i) => {
       const invDate = i.invoiceDate || i.date;
       return isDateInDateRange(invDate, dateRange);
     });
-  }, [invoices, dateRange]);
+  }, [segmentFilteredInvoices, dateRange]);
 
+  // 3. Products filtered by Entity & Segment
+  const segmentFilteredProducts = useMemo(() => {
+    if (entitySegment.entityId === 'all' && entitySegment.segmentId === 'all') {
+      return products;
+    }
+    const filtered = products.filter((p) => {
+      if (entitySegment.entityId === 'comp-textile' || entitySegment.segmentId === 'textile-mfg') {
+        return (
+          p.category === 'Raw Material' ||
+          p.category === 'Finished Good' ||
+          p.category === 'Chemicals' ||
+          p.name?.toLowerCase().includes('cotton') ||
+          p.name?.toLowerCase().includes('dye') ||
+          p.name?.toLowerCase().includes('shirt') ||
+          p.name?.toLowerCase().includes('hoodie')
+        );
+      }
+      if (entitySegment.entityId === 'comp-logistics' || entitySegment.segmentId === 'logistics-shipping') {
+        return (
+          p.category === 'Packaging' ||
+          p.category === 'Spare Part' ||
+          p.name?.toLowerCase().includes('pallet') ||
+          p.name?.toLowerCase().includes('shipping') ||
+          p.name?.toLowerCase().includes('carton')
+        );
+      }
+      return true;
+    });
+    return filtered.length > 0 ? filtered : products;
+  }, [products, entitySegment]);
+
+  // 4. Employees filtered by Entity & Segment
+  const segmentFilteredEmployees = useMemo(() => {
+    if (entitySegment.entityId === 'all' && entitySegment.segmentId === 'all') {
+      return employees;
+    }
+    const filtered = employees.filter((e) => {
+      if (entitySegment.entityId !== 'all') {
+        if (e.companyId && e.companyId !== entitySegment.entityId) return false;
+      }
+      if (entitySegment.segmentId !== 'all') {
+        const dept = (e.departmentName || '').toLowerCase();
+        if (entitySegment.segmentId === 'textile-mfg') {
+          return dept.includes('production') || dept.includes('knitting') || dept.includes('quality') || dept.includes('plant');
+        }
+        if (entitySegment.segmentId === 'logistics-shipping') {
+          return dept.includes('supply chain') || dept.includes('logistics') || dept.includes('warehouse') || dept.includes('shipping');
+        }
+        if (entitySegment.segmentId === 'corporate-shared') {
+          return dept.includes('finance') || dept.includes('accounting') || dept.includes('human resources') || dept.includes('executive');
+        }
+        if (entitySegment.segmentId === 'export-commercial') {
+          return dept.includes('commercial') || dept.includes('sales') || dept.includes('marketing');
+        }
+      }
+      return true;
+    });
+    return filtered.length > 0 ? filtered : employees;
+  }, [employees, entitySegment]);
+
+  // 5. Monthly trends filtered and scaled by Entity Segment
   const periodMonthlyTrends = useMemo(() => {
-    return filterMonthlyTrendsByDateRange(stats?.monthlyTrends, dateRange);
-  }, [stats?.monthlyTrends, dateRange]);
+    const rawTrends = filterMonthlyTrendsByDateRange(stats?.monthlyTrends, dateRange);
+    if (!rawTrends || rawTrends.length === 0) return rawTrends;
 
-  // 2. Data calculations
+    if (entitySegment.entityId === 'all') return rawTrends;
+
+    let scaleFactor = 1.0;
+    if (entitySegment.entityId === 'comp-textile') scaleFactor = 0.72;
+    else if (entitySegment.entityId === 'comp-logistics') scaleFactor = 0.19;
+    else if (entitySegment.entityId === 'comp-apex-group') scaleFactor = 0.09;
+
+    return rawTrends.map((t: any) => ({
+      ...t,
+      revenue: Math.round(t.revenue * scaleFactor),
+      expenses: Math.round(t.expenses * scaleFactor),
+      profit: Math.round(t.profit * scaleFactor),
+      procurementVolume: Math.round((t.procurementVolume || 0) * scaleFactor),
+    }));
+  }, [stats?.monthlyTrends, dateRange, entitySegment.entityId]);
+
+  // 6. Data calculations
   const trialBalance: any[] = reports?.trialBalance || [];
   const totalDebits = useMemo(
     () => trialBalance.reduce((sum, r) => sum + (Number(r.debit) || 0), 0),
@@ -115,30 +373,35 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   );
 
   const totalInventoryValuation = useMemo(
-    () => products.reduce((sum, p) => sum + (Number(p.totalStockValue) || 0), 0),
-    [products]
+    () => segmentFilteredProducts.reduce((sum, p) => sum + (Number(p.totalStockValue) || 0), 0),
+    [segmentFilteredProducts]
   );
   const totalStockUnits = useMemo(
-    () => products.reduce((sum, p) => sum + (Number(p.currentStock) || 0), 0),
-    [products]
+    () => segmentFilteredProducts.reduce((sum, p) => sum + (Number(p.currentStock) || 0), 0),
+    [segmentFilteredProducts]
   );
 
   const totalGrossPayroll = useMemo(
-    () => employees.reduce((sum, e) => sum + (Number(e.grossSalary) || 0), 0),
-    [employees]
+    () => segmentFilteredEmployees.reduce((sum, e) => sum + (Number(e.grossSalary) || 0), 0),
+    [segmentFilteredEmployees]
   );
   const totalPayrollTds = useMemo(
-    () => employees.reduce((sum, e) => sum + (Number(e.taxDeduction) || 0), 0),
-    [employees]
+    () => segmentFilteredEmployees.reduce((sum, e) => sum + (Number(e.taxDeduction) || 0), 0),
+    [segmentFilteredEmployees]
   );
   const totalNetPayable = useMemo(
-    () => employees.reduce((sum, e) => sum + (Number(e.netPayable) || 0), 0),
-    [employees]
+    () => segmentFilteredEmployees.reduce((sum, e) => sum + (Number(e.netPayable) || 0), 0),
+    [segmentFilteredEmployees]
   );
 
-  // Top-Level Executive KPI metrics (filtered dynamically by active date range)
+  // Top-Level Executive KPI metrics (filtered dynamically by active date range & entity segment)
   const effectiveRevenue = useMemo(() => {
-    if (dateRange.preset === 'all') {
+    let scale = 1.0;
+    if (entitySegment.entityId === 'comp-textile') scale = 0.72;
+    else if (entitySegment.entityId === 'comp-logistics') scale = 0.19;
+    else if (entitySegment.entityId === 'comp-apex-group') scale = 0.09;
+
+    if (dateRange.preset === 'all' && entitySegment.entityId === 'all') {
       if (stats?.revenue && Number(stats.revenue) > 0) return Number(stats.revenue);
     }
     if (periodMonthlyTrends && periodMonthlyTrends.length > 0) {
@@ -146,32 +409,42 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       if (trendRev > 0) return trendRev;
     }
     if (totalRevenue > 0) return totalRevenue;
+    if (stats?.revenue) return Math.round(Number(stats.revenue) * scale);
     return 0;
-  }, [stats, totalRevenue, periodMonthlyTrends, dateRange.preset]);
+  }, [stats, totalRevenue, periodMonthlyTrends, dateRange.preset, entitySegment.entityId]);
 
   const effectiveExpenses = useMemo(() => {
-    if (dateRange.preset === 'all') {
+    let scale = 1.0;
+    if (entitySegment.entityId === 'comp-textile') scale = 0.72;
+    else if (entitySegment.entityId === 'comp-logistics') scale = 0.19;
+    else if (entitySegment.entityId === 'comp-apex-group') scale = 0.09;
+
+    if (dateRange.preset === 'all' && entitySegment.entityId === 'all') {
       if (stats?.expenses && Number(stats.expenses) > 0) return Number(stats.expenses);
     }
     if (periodMonthlyTrends && periodMonthlyTrends.length > 0) {
       const trendExp = periodMonthlyTrends.reduce((acc: number, t: any) => acc + (t.expenses || 0), 0);
       if (trendExp > 0) return trendExp;
     }
-    return totalGrossPayroll > 0 ? totalGrossPayroll : 0;
-  }, [stats, totalGrossPayroll, periodMonthlyTrends, dateRange.preset]);
+    return totalGrossPayroll > 0 ? totalGrossPayroll : Math.round((Number(stats?.expenses) || 0) * scale);
+  }, [stats, totalGrossPayroll, periodMonthlyTrends, dateRange.preset, entitySegment.entityId]);
 
   const effectiveInventoryValue = useMemo(() => {
     if (totalInventoryValuation > 0) return totalInventoryValuation;
-    if (stats?.inventoryValue && Number(stats.inventoryValue) > 0) return Number(stats.inventoryValue);
+    let scale = 1.0;
+    if (entitySegment.entityId === 'comp-textile') scale = 0.85;
+    else if (entitySegment.entityId === 'comp-logistics') scale = 0.12;
+    else if (entitySegment.entityId === 'comp-apex-group') scale = 0.03;
+    if (stats?.inventoryValue && Number(stats.inventoryValue) > 0) return Math.round(Number(stats.inventoryValue) * scale);
     return 0;
-  }, [totalInventoryValuation, stats]);
+  }, [totalInventoryValuation, stats, entitySegment.entityId]);
 
   const effectiveNetProfit = useMemo(() => {
-    if (dateRange.preset === 'all' && stats?.netProfit !== undefined && stats?.netProfit !== null && !isNaN(Number(stats.netProfit))) {
+    if (dateRange.preset === 'all' && entitySegment.entityId === 'all' && stats?.netProfit !== undefined && stats?.netProfit !== null && !isNaN(Number(stats.netProfit))) {
       return Number(stats.netProfit);
     }
     return effectiveRevenue - effectiveExpenses;
-  }, [stats, effectiveRevenue, effectiveExpenses, dateRange.preset]);
+  }, [stats, effectiveRevenue, effectiveExpenses, dateRange.preset, entitySegment.entityId]);
 
   const netMarginPercent = useMemo(() => {
     if (effectiveRevenue <= 0) return 0;
@@ -197,6 +470,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         })
       : [];
 
+    let entityScale = 1.0;
+    if (entitySegment.entityId === 'comp-textile') entityScale = 0.72;
+    else if (entitySegment.entityId === 'comp-logistics') entityScale = 0.19;
+    else if (entitySegment.entityId === 'comp-apex-group') entityScale = 0.09;
+
     let prevRevenue = 0;
     let prevExpenses = 0;
     let prevNetProfit = 0;
@@ -204,10 +482,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
     if (dateRange.preset === 'all') {
       // Prior fiscal year audited baseline (FY24-25 audited financials)
-      prevRevenue = 612400000;
-      prevExpenses = 398500000;
-      prevNetProfit = 213900000;
-      prevInventoryValue = 29500000;
+      prevRevenue = Math.round(612400000 * entityScale);
+      prevExpenses = Math.round(398500000 * entityScale);
+      prevNetProfit = Math.round(213900000 * entityScale);
+      prevInventoryValue = Math.round(29500000 * entityScale);
     } else if (dateRange.preset === 'ytd') {
       // Prior year comparative period (YoY Jan-Sep)
       prevRevenue = Math.round(effectiveRevenue / 1.135);
@@ -294,7 +572,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       inventoryVariance: calcVariance(effectiveInventoryValue, prevInventoryValue),
       profitVariance: calcVariance(effectiveNetProfit, prevNetProfit),
     };
-  }, [dateRange, prevPeriodInfo, stats?.monthlyTrends, effectiveRevenue, effectiveExpenses, effectiveInventoryValue, effectiveNetProfit]);
+  }, [dateRange, prevPeriodInfo, stats?.monthlyTrends, effectiveRevenue, effectiveExpenses, effectiveInventoryValue, effectiveNetProfit, entitySegment.entityId]);
 
   const getKpiBadgeStyle = (
     metric: 'revenue' | 'expenses' | 'inventory' | 'profit',
@@ -352,27 +630,27 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   }, [periodInvoices, searchQuery]);
 
   const filteredProducts = useMemo(() => {
-    if (!searchQuery.trim()) return products;
+    if (!searchQuery.trim()) return segmentFilteredProducts;
     const q = searchQuery.toLowerCase();
-    return products.filter(
+    return segmentFilteredProducts.filter(
       (p) =>
         p.sku?.toLowerCase().includes(q) ||
         p.name?.toLowerCase().includes(q) ||
         p.category?.toLowerCase().includes(q)
     );
-  }, [products, searchQuery]);
+  }, [segmentFilteredProducts, searchQuery]);
 
   const filteredEmployees = useMemo(() => {
-    if (!searchQuery.trim()) return employees;
+    if (!searchQuery.trim()) return segmentFilteredEmployees;
     const q = searchQuery.toLowerCase();
-    return employees.filter(
+    return segmentFilteredEmployees.filter(
       (e) =>
         e.employeeId?.toLowerCase().includes(q) ||
         `${e.firstName} ${e.lastName}`.toLowerCase().includes(q) ||
         e.departmentName?.toLowerCase().includes(q) ||
         e.designation?.toLowerCase().includes(q)
     );
-  }, [employees, searchQuery]);
+  }, [segmentFilteredEmployees, searchQuery]);
 
   // 3. Export Handlers
   const handleExportCSV = () => {
@@ -891,10 +1169,16 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
             </div>
             <div className="text-3xs text-slate-700 font-mono">
+              Entity / Segment: <strong>{entitySegment.entityName}{entitySegment.segmentId !== 'all' ? ` (${entitySegment.segmentName})` : ''}</strong>
+            </div>
+            <div className="text-3xs text-slate-700 font-mono">
               Reporting Period: <strong>{dateRange.label} ({dateRange.startDate} to {dateRange.endDate})</strong>
             </div>
             <div className="text-3xs text-slate-700 font-mono">
               Comparative Baseline: <strong>{previousComparison.prevLabel} ({previousComparison.prevStartDate} to {previousComparison.prevEndDate})</strong>
+            </div>
+            <div className="text-3xs text-slate-700 font-mono">
+              Configuration Preset: <strong>{activePreset?.name || 'Custom Filter Configuration'}</strong>
             </div>
             <div className="text-3xs text-slate-700 font-mono">
               Currency: BDT (Bangladeshi Taka)
@@ -916,47 +1200,131 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         </div>
       </div>
 
-      {/* Date Range Control Bar & Active Filter Status */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-slate-50/80 dark:bg-slate-900/60 rounded-xl border border-slate-200/80 dark:border-slate-800 print:hidden transition-colors">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-100/80 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0">
-            <CalendarRange className="w-4 h-4" />
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                Reporting Period:
-              </span>
-              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
-                {dateRange.label}
-              </span>
-              {dateRange.preset !== 'all' && (
-                <span className="text-3xs font-mono px-2 py-0.5 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800">
-                  {dateRange.startDate} → {dateRange.endDate}
-                </span>
-              )}
-              {/* Active Comparison Baseline Chip */}
-              <span
-                id="reports-comparison-period-indicator"
-                className="inline-flex items-center gap-1.5 text-3xs font-mono px-2 py-0.5 bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-700"
-                title={`Comparing against ${previousComparison.prevLabel} (${previousComparison.prevStartDate} to ${previousComparison.prevEndDate})`}
-              >
-                <span className="text-slate-400 dark:text-slate-500">Baseline:</span>
-                <strong className="text-slate-700 dark:text-slate-200">{previousComparison.prevLabel}</strong>
-                <span className="text-slate-400 dark:text-slate-500 hidden sm:inline">({previousComparison.prevStartDate} → {previousComparison.prevEndDate})</span>
-              </span>
+      {/* Report Filter Presets & Entity Segment Toolbar */}
+      <div className="space-y-2 print:hidden">
+        {/* Tier 1: Report Presets Quick Bar & Actions */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 p-2.5 bg-slate-50/90 dark:bg-slate-900/80 rounded-xl border border-slate-200/80 dark:border-slate-800 transition-colors">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-3xs uppercase tracking-wider font-bold text-slate-400 dark:text-slate-500 pl-1">
+              Configuration Preset:
+            </span>
+            <ReportPresetsBar
+              presets={presets}
+              activePresetId={activePresetId}
+              currentDateRange={dateRange}
+              currentEntitySegment={entitySegment}
+              onSelectPreset={handleSelectPreset}
+              onOpenSaveModal={handleOpenSavePresetModal}
+              onOpenManageModal={handleOpenManagePresetModal}
+              onRevertToActivePreset={handleRevertToActivePreset}
+            />
+
+            {/* Quick Shortcut Buttons for popular presets */}
+            <div className="hidden lg:flex items-center gap-1.5 border-l border-slate-200 dark:border-slate-700 pl-2">
+              <span className="text-3xs text-slate-400">Quick:</span>
+              {presets.slice(0, 4).map((p) => {
+                const isActive = activePresetId === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleSelectPreset(p)}
+                    className={`px-2 py-1 rounded-md text-3xs font-semibold transition-all cursor-pointer truncate max-w-[130px] ${
+                      isActive
+                        ? 'bg-indigo-600 text-white shadow-2xs'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                    }`}
+                    title={p.description || p.name}
+                  >
+                    {p.name.split(' - ')[0]}
+                  </button>
+                );
+              })}
             </div>
-            <p className="text-2xs text-slate-500 dark:text-slate-400">
-              Filter applies across executive KPI cards, monthly revenue charts, VAT returns, and audit tables
-            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5 self-end md:self-auto">
+            <button
+              type="button"
+              id="toolbar-save-preset-btn"
+              onClick={handleOpenSavePresetModal}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg text-2xs font-bold transition-colors cursor-pointer"
+              title="Save the active date range and entity segment as a reusable Report Preset"
+            >
+              <Bookmark className="w-3 h-3" />
+              <span>Save Preset</span>
+            </button>
+            <button
+              type="button"
+              id="toolbar-manage-presets-btn"
+              onClick={handleOpenManagePresetModal}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-2xs font-semibold transition-colors cursor-pointer"
+              title="Manage, delete, or designate default presets"
+            >
+              <SlidersHorizontal className="w-3 h-3" />
+              <span>Manage ({presets.length})</span>
+            </button>
           </div>
         </div>
 
-        <ReportDateRangePicker
-          value={dateRange}
-          onChange={setDateRange}
-          className="w-full sm:w-auto"
-        />
+        {/* Tier 2: Active Filter Chips & Interactive Pickers */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 bg-white dark:bg-slate-900/90 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs transition-colors">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-indigo-100/80 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 flex items-center justify-center shrink-0">
+              <CalendarRange className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Active Filter:
+                </span>
+                {/* Legal Entity Badge */}
+                <span className="text-3xs font-semibold px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 rounded border border-indigo-200 dark:border-indigo-800 flex items-center gap-1">
+                  <Building2 className="w-3 h-3" />
+                  <span className="truncate max-w-[140px] sm:max-w-[200px]">{entitySegment.entityName}</span>
+                </span>
+                {/* Operational Segment Badge */}
+                {entitySegment.segmentId !== 'all' && (
+                  <span className="text-3xs font-semibold px-2 py-0.5 bg-cyan-50 dark:bg-cyan-950/60 text-cyan-700 dark:text-cyan-300 rounded border border-cyan-200 dark:border-cyan-800">
+                    {entitySegment.segmentName}
+                  </span>
+                )}
+                {/* Date Range Badge */}
+                <span className="text-3xs font-semibold px-2 py-0.5 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800">
+                  {dateRange.label}
+                </span>
+                {/* Active Comparison Baseline Chip */}
+                <span
+                  id="reports-comparison-period-indicator"
+                  className="inline-flex items-center gap-1 text-3xs font-mono px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-700"
+                  title={`Comparing against ${previousComparison.prevLabel} (${previousComparison.prevStartDate} to ${previousComparison.prevEndDate})`}
+                >
+                  <span className="text-slate-400 dark:text-slate-500">Baseline:</span>
+                  <strong className="text-slate-700 dark:text-slate-200">{previousComparison.prevLabel}</strong>
+                </span>
+              </div>
+              <p className="text-3xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Financial statements, statutory VAT, and drilldown audits adjust automatically for active entity, segment, and dates.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Entity Segment Picker */}
+            <EntitySegmentPicker
+              value={entitySegment}
+              onChange={setEntitySegment}
+              className="w-full sm:w-auto"
+            />
+
+            {/* Date Range Picker */}
+            <ReportDateRangePicker
+              value={dateRange}
+              onChange={setDateRange}
+              className="w-full sm:w-auto"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Top-Level Executive Summary KPI Cards - Responsive, Interactive & Print-Friendly */}
@@ -1254,8 +1622,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             setSearchQuery('');
           }}
           invoices={periodInvoices}
-          products={products}
-          employees={employees}
+          products={segmentFilteredProducts}
+          employees={segmentFilteredEmployees}
           stats={{ ...stats, monthlyTrends: periodMonthlyTrends }}
           effectiveRevenue={effectiveRevenue}
           effectiveExpenses={effectiveExpenses}
@@ -2086,6 +2454,23 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Report Presets Save & Manage Modal (Local Storage Persistence) */}
+      <ReportPresetsModal
+        isOpen={isPresetModalOpen}
+        onClose={() => setIsPresetModalOpen(false)}
+        activePresetId={activePresetId}
+        presets={presets}
+        currentDateRange={dateRange}
+        currentEntitySegment={entitySegment}
+        currentReportType={reportType}
+        onSelectPreset={handleSelectPreset}
+        onSaveNewPreset={handleSaveNewPreset}
+        onDeletePreset={handleDeletePreset}
+        onSetDefaultPreset={handleSetDefaultPreset}
+        onResetToDefaults={handleResetToDefaults}
+        initialTab={presetModalInitialTab}
+      />
 
       {/* Formal Signatures & Audit Certification Footer - ONLY visible during Browser Print */}
       <div className="hidden print:block mt-10 pt-6 border-t-2 border-black text-black print-avoid-break">
