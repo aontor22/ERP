@@ -377,6 +377,16 @@ export function getRoleProfile(roleOrUser: RoleType | { role?: RoleType } | unde
   return ROLE_PROFILES[role] || ROLE_PROFILES['CFO'];
 }
 
+let dynamicRolePermissions: Record<string, string[]> = {};
+
+export function setDynamicRolePermissions(overrides: Record<string, string[]>) {
+  dynamicRolePermissions = { ...dynamicRolePermissions, ...overrides };
+}
+
+export function getDynamicRolePermissions(): Record<string, string[]> {
+  return dynamicRolePermissions;
+}
+
 /**
  * Check if the active role is in Read-Only mode (e.g. Auditor)
  */
@@ -389,7 +399,7 @@ export function isReadOnlyRole(roleOrUser: RoleType | { role?: RoleType } | unde
  * Check if user has permission to perform a specific action
  */
 export function hasPermission(
-  roleOrUser: RoleType | { role?: RoleType } | undefined | null,
+  roleOrUser: RoleType | { role?: RoleType; permissions?: string[] } | undefined | null,
   action: ActionPermission
 ): { allowed: boolean; reason?: string } {
   const profile = getRoleProfile(roleOrUser);
@@ -410,9 +420,22 @@ export function hasPermission(
     };
   }
 
-  // Check action whitelist
-  if (profile.allowedActions.includes(action)) {
+  // Check dynamic role overrides from server
+  const dynamicPerms = dynamicRolePermissions[profile.role];
+  if (dynamicPerms) {
+    if (dynamicPerms.includes(action)) {
+      return { allowed: true };
+    }
+  } else if (profile.allowedActions.includes(action)) {
+    // Check static profile whitelist
     return { allowed: true };
+  }
+
+  // Check user session permissions if present
+  if (typeof roleOrUser === 'object' && Array.isArray(roleOrUser?.permissions)) {
+    if (roleOrUser.permissions.includes(action) || roleOrUser.permissions.includes('*')) {
+      return { allowed: true };
+    }
   }
 
   // Provide clear role-based explanation

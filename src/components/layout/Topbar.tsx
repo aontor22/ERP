@@ -51,21 +51,43 @@ export const Topbar: React.FC<TopbarProps> = ({
   const [showCompanyMenu, setShowCompanyMenu] = useState(false);
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
+  const [roleSearch, setRoleSearch] = useState('');
 
   const t = translations[lang];
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const roles: RoleType[] = [
     'Super Admin',
+    'System Admin',
+    'CEO',
     'CFO',
-    'Auditor',
-    'Procurement Manager',
-    'Warehouse Manager',
-    'Production Manager',
-    'Sales Manager',
-    'HR Manager',
+    'Finance Manager',
     'Accountant',
+    'Procurement Manager',
+    'Purchase Officer',
+    'Warehouse Manager',
+    'Inventory Officer',
+    'Production Manager',
+    'Quality Manager',
+    'Sales Manager',
+    'Sales Executive',
+    'HR Manager',
+    'Auditor',
+    'Employee',
+    'Viewer',
   ];
+
+  const filteredRoles = roles.filter((r) => {
+    if (!roleSearch.trim()) return true;
+    const q = roleSearch.toLowerCase();
+    const prof = getRoleProfile(r);
+    return (
+      r.toLowerCase().includes(q) ||
+      prof.category.toLowerCase().includes(q) ||
+      prof.title.toLowerCase().includes(q) ||
+      prof.badgeLabel.toLowerCase().includes(q)
+    );
+  });
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -224,15 +246,28 @@ export const Topbar: React.FC<TopbarProps> = ({
           </button>
 
           {showRoleMenu && (
-            <div className="absolute right-0 mt-1.5 w-64 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl p-1.5 z-50 animate-in fade-in zoom-in-95">
-              <div className="px-3 py-1.5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 mb-1">
-                <span className="text-2xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                  Select Enterprise Role
+            <div className="absolute right-0 mt-1.5 w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl p-2 z-50 animate-in fade-in zoom-in-95">
+              <div className="px-2 py-1.5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 mb-2">
+                <span className="text-2xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  Enterprise Role ({filteredRoles.length}/18)
                 </span>
-                <span className="text-3xs text-slate-400 font-mono">RBAC Engine</span>
+                <span className="text-3xs text-blue-600 dark:text-blue-400 font-mono font-semibold">RBAC Matrix</span>
               </div>
-              <div className="max-h-72 overflow-y-auto space-y-0.5">
-                {roles.map((r) => {
+
+              {/* Role Quick Filter */}
+              <div className="mb-2 px-1">
+                <input
+                  type="text"
+                  value={roleSearch}
+                  onChange={(e) => setRoleSearch(e.target.value)}
+                  placeholder="Filter role or category..."
+                  className="w-full px-2.5 py-1 text-2xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+
+              <div className="max-h-72 overflow-y-auto space-y-0.5 pr-0.5">
+                {filteredRoles.map((r) => {
                   const prof = getRoleProfile(r);
                   const isSelected = r === currentUser?.role;
                   return (

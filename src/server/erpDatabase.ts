@@ -17,6 +17,12 @@ import {
   PurchaseOrder,
   SalesInvoice,
   SalesOrder,
+  RoleType,
+  SecurityPolicySettings,
+  SecurityUserAccount,
+  SoDConflictRule,
+  SoDScanReport,
+  SoDViolation,
   StockLedgerEntry,
   StockoutRiskLevel,
   Supplier,
@@ -1239,6 +1245,392 @@ class ERPDatabase {
     },
   ];
 
+  // Enterprise Security User Accounts
+  public securityUsers: SecurityUserAccount[] = [
+    {
+      id: 'usr-001',
+      name: 'Syed Manzur Elahi',
+      email: 'chairman@apex-group.com',
+      designation: 'Executive Chairman & Founder',
+      department: 'Executive Board',
+      role: 'Super Admin',
+      status: 'Active',
+      mfaEnabled: true,
+      lastLogin: '2026-09-19T21:40:00Z',
+      lastLoginIp: '192.168.10.15',
+      assignedCompanyIds: ['comp-apex-group', 'comp-textile', 'comp-logistics'],
+      failedLoginAttempts: 0,
+    },
+    {
+      id: 'usr-002',
+      name: 'Nasim Ahmed, CISSP',
+      email: 'nasim.it@apex-group.com',
+      designation: 'Chief Information Security Officer (CISO)',
+      department: 'IT & Information Security',
+      role: 'System Admin',
+      status: 'Active',
+      mfaEnabled: true,
+      lastLogin: '2026-09-19T22:15:00Z',
+      lastLoginIp: '192.168.10.88',
+      assignedCompanyIds: ['comp-apex-group', 'comp-textile', 'comp-logistics'],
+      failedLoginAttempts: 0,
+    },
+    {
+      id: 'usr-003',
+      name: 'Anwar Hossain, FCMA',
+      email: 'cfo.anwar@apex-group.com',
+      designation: 'Chief Financial Officer (CFO)',
+      department: 'Finance & Treasury',
+      role: 'CFO',
+      status: 'Active',
+      mfaEnabled: true,
+      lastLogin: '2026-09-19T20:30:00Z',
+      lastLoginIp: '192.168.10.42',
+      assignedCompanyIds: ['comp-apex-group', 'comp-textile', 'comp-logistics'],
+      failedLoginAttempts: 0,
+    },
+    {
+      id: 'usr-004',
+      name: 'Farzana Yasmin',
+      email: 'farzana.y@apex-group.com',
+      designation: 'Senior General Ledger Accountant',
+      department: 'Finance & Accounting',
+      role: 'Accountant',
+      status: 'Active',
+      mfaEnabled: true,
+      lastLogin: '2026-09-19T18:10:00Z',
+      lastLoginIp: '192.168.10.55',
+      assignedCompanyIds: ['comp-textile'],
+      failedLoginAttempts: 0,
+    },
+    {
+      id: 'usr-005',
+      name: 'Tariqul Islam',
+      email: 'tariqul.procure@apex-group.com',
+      designation: 'Head of Strategic Procurement',
+      department: 'Procurement & Supply Chain',
+      role: 'Procurement Manager',
+      status: 'Active',
+      mfaEnabled: true,
+      lastLogin: '2026-09-19T17:45:00Z',
+      lastLoginIp: '192.168.10.60',
+      assignedCompanyIds: ['comp-textile'],
+      failedLoginAttempts: 0,
+    },
+    {
+      id: 'usr-006',
+      name: 'Rahim Uddin',
+      email: 'warehouse.head@apex-group.com',
+      designation: 'General Manager - Central Warehousing',
+      department: 'Logistics & Warehousing',
+      role: 'Warehouse Manager',
+      status: 'Active',
+      mfaEnabled: false,
+      lastLogin: '2026-09-19T16:20:00Z',
+      lastLoginIp: '192.168.20.10',
+      assignedCompanyIds: ['comp-textile'],
+      failedLoginAttempts: 0,
+    },
+    {
+      id: 'usr-007',
+      name: 'Jahangir Alam',
+      email: 'jahangir.prod@apex-group.com',
+      designation: 'General Manager - Manufacturing Mill 1',
+      department: 'Production & Knitting',
+      role: 'Production Manager',
+      status: 'Active',
+      mfaEnabled: false,
+      lastLogin: '2026-09-19T15:00:00Z',
+      lastLoginIp: '192.168.20.12',
+      assignedCompanyIds: ['comp-textile'],
+      failedLoginAttempts: 0,
+    },
+    {
+      id: 'usr-008',
+      name: 'Kamrul Hasan',
+      email: 'sales.kamrul@apex-group.com',
+      designation: 'Head of Global Apparel Exports',
+      department: 'Commercial & Export Sales',
+      role: 'Sales Manager',
+      status: 'Active',
+      mfaEnabled: true,
+      lastLogin: '2026-09-19T14:15:00Z',
+      lastLoginIp: '192.168.10.72',
+      assignedCompanyIds: ['comp-textile'],
+      failedLoginAttempts: 0,
+    },
+    {
+      id: 'usr-009',
+      name: 'Nusrat Jahan',
+      email: 'nusrat.hr@apex-group.com',
+      designation: 'Head of Human Resources & Payroll',
+      department: 'Human Resources',
+      role: 'HR Manager',
+      status: 'Active',
+      mfaEnabled: true,
+      lastLogin: '2026-09-19T13:30:00Z',
+      lastLoginIp: '192.168.10.95',
+      assignedCompanyIds: ['comp-apex-group', 'comp-textile'],
+      failedLoginAttempts: 0,
+    },
+    {
+      id: 'usr-010',
+      name: 'S. M. Rezwan, FCA',
+      email: 'rezwan.audit@kpmg-bangladesh.com',
+      designation: 'Lead Statutory Engagement Partner',
+      department: 'Statutory External Audit (KPMG)',
+      role: 'Auditor',
+      status: 'Active',
+      mfaEnabled: true,
+      lastLogin: '2026-09-19T11:00:00Z',
+      lastLoginIp: '103.205.71.18',
+      assignedCompanyIds: ['comp-apex-group', 'comp-textile', 'comp-logistics'],
+      failedLoginAttempts: 0,
+    },
+    {
+      id: 'usr-011',
+      name: 'Tania Sultana',
+      email: 'tania.qc@apex-group.com',
+      designation: 'Lead Quality Assurance Inspector',
+      department: 'Quality Control & Compliance',
+      role: 'Quality Manager',
+      status: 'Active',
+      mfaEnabled: false,
+      lastLogin: '2026-09-18T16:00:00Z',
+      lastLoginIp: '192.168.20.15',
+      assignedCompanyIds: ['comp-textile'],
+      failedLoginAttempts: 0,
+    },
+    {
+      id: 'usr-012',
+      name: 'Sumon Barua',
+      email: 'sumon.floor@apex-group.com',
+      designation: 'Senior Knitting Line Supervisor',
+      department: 'Knitting Operations',
+      role: 'Employee',
+      status: 'Active',
+      mfaEnabled: false,
+      lastLogin: '2026-09-17T09:30:00Z',
+      lastLoginIp: '192.168.20.44',
+      assignedCompanyIds: ['comp-textile'],
+      failedLoginAttempts: 0,
+    },
+  ];
+
+  // Configurable Role Permissions Matrix
+  public rolePermissions: Record<string, string[]> = {
+    'Super Admin': [
+      'products:create',
+      'inventory:adjust',
+      'inventory:forecast_apply',
+      'inventory:forecast_order',
+      'procurement:create',
+      'procurement:approve',
+      'sales:create_invoice',
+      'accounting:create_journal',
+      'accounting:manage_budget',
+      'hr:generate_payroll',
+      'manufacturing:create_order',
+      'manufacturing:update_order',
+      'workflows:approve',
+      'workflows:reject',
+      'settings:manage',
+      'organization:manage',
+      'audit:view',
+      'reports:export',
+    ],
+    'System Admin': [
+      'settings:manage',
+      'organization:manage',
+      'audit:view',
+      'reports:export',
+    ],
+    'CEO': [
+      'products:create',
+      'inventory:adjust',
+      'inventory:forecast_apply',
+      'inventory:forecast_order',
+      'procurement:create',
+      'procurement:approve',
+      'sales:create_invoice',
+      'accounting:create_journal',
+      'accounting:manage_budget',
+      'hr:generate_payroll',
+      'manufacturing:create_order',
+      'manufacturing:update_order',
+      'workflows:approve',
+      'workflows:reject',
+      'settings:manage',
+      'organization:manage',
+      'audit:view',
+      'reports:export',
+    ],
+    'CFO': [
+      'accounting:create_journal',
+      'accounting:manage_budget',
+      'procurement:create',
+      'procurement:approve',
+      'sales:create_invoice',
+      'workflows:approve',
+      'workflows:reject',
+      'inventory:forecast_apply',
+      'inventory:forecast_order',
+      'audit:view',
+      'reports:export',
+    ],
+    'Finance Manager': [
+      'accounting:create_journal',
+      'accounting:manage_budget',
+      'procurement:approve',
+      'workflows:approve',
+      'workflows:reject',
+      'audit:view',
+      'reports:export',
+    ],
+    'Accountant': [
+      'accounting:create_journal',
+      'sales:create_invoice',
+      'audit:view',
+      'reports:export',
+    ],
+    'Procurement Manager': [
+      'procurement:create',
+      'procurement:approve',
+      'inventory:forecast_order',
+      'workflows:approve',
+      'workflows:reject',
+      'audit:view',
+      'reports:export',
+    ],
+    'Purchase Officer': [
+      'procurement:create',
+      'inventory:forecast_order',
+    ],
+    'Warehouse Manager': [
+      'products:create',
+      'inventory:adjust',
+      'inventory:forecast_apply',
+      'inventory:forecast_order',
+      'audit:view',
+      'reports:export',
+    ],
+    'Inventory Officer': [
+      'inventory:adjust',
+      'inventory:forecast_apply',
+    ],
+    'Sales Manager': [
+      'sales:create_invoice',
+      'products:create',
+      'workflows:approve',
+      'workflows:reject',
+      'audit:view',
+      'reports:export',
+    ],
+    'Sales Executive': [
+      'sales:create_invoice',
+    ],
+    'Production Manager': [
+      'manufacturing:create_order',
+      'manufacturing:update_order',
+      'products:create',
+      'workflows:approve',
+      'workflows:reject',
+      'audit:view',
+      'reports:export',
+    ],
+    'Quality Manager': [
+      'audit:view',
+    ],
+    'HR Manager': [
+      'hr:generate_payroll',
+      'workflows:approve',
+      'workflows:reject',
+      'audit:view',
+      'reports:export',
+    ],
+    'Auditor': [
+      'audit:view',
+      'reports:export',
+    ],
+    'Employee': [],
+    'Viewer': [],
+  };
+
+  // Enterprise Security & Governance Policies
+  public securityPolicies: SecurityPolicySettings = {
+    sessionTimeoutMinutes: 30,
+    maxFailedLoginAttempts: 5,
+    passwordMinLength: 12,
+    requireSpecialChars: true,
+    passwordExpiryDays: 90,
+    mfaPolicy: 'ENFORCED_FOR_ADMINS',
+    immutableAuditLogEnforced: true,
+    ipWhitelistingEnabled: false,
+    whitelistedIpRanges: ['192.168.10.0/24', '192.168.20.0/24', '10.0.0.0/16'],
+    allowConcurrentSessions: false,
+    strictNegativeStockBlock: true,
+    doubleEntryBalancingCheck: true,
+  };
+
+  // Separation of Duties (SoD) Conflict Catalog
+  public sodRules: SoDConflictRule[] = [
+    {
+      id: 'sod-001',
+      code: 'SOD-PROC-01',
+      title: 'Purchase Order Generation vs Workflow Signoff',
+      description: 'The entity initiating purchase order requisitions must not have permission to unilaterally approve their own purchase commitments.',
+      primaryAction: 'procurement:create',
+      conflictingAction: 'procurement:approve',
+      riskSeverity: 'CRITICAL',
+      complianceStandard: 'SOX-404',
+      remediationRecommendation: 'Separate purchase officer creation from managerial two-tier financial signoff.',
+    },
+    {
+      id: 'sod-002',
+      code: 'SOD-FIN-01',
+      title: 'General Ledger Journal Posting vs Budget Limit Modification',
+      description: 'General ledger accountants creating financial vouchers must not have unrestricted permission to expand budget ceiling allocations.',
+      primaryAction: 'accounting:create_journal',
+      conflictingAction: 'accounting:manage_budget',
+      riskSeverity: 'HIGH',
+      complianceStandard: 'COSO-2013',
+      remediationRecommendation: 'Restrict budget ceiling management strictly to CFO / Board of Directors.',
+    },
+    {
+      id: 'sod-003',
+      code: 'SOD-INV-01',
+      title: 'Stock Adjustment Write-Off vs General Ledger Booking',
+      description: 'Personnel executing physical stock adjustments must not hold unilateral journal posting authority to prevent unverified inventory write-offs.',
+      primaryAction: 'inventory:adjust',
+      conflictingAction: 'accounting:create_journal',
+      riskSeverity: 'CRITICAL',
+      complianceStandard: 'ISO-27001',
+      remediationRecommendation: 'Require independent financial ledger reconciliation for physical stock discrepancies.',
+    },
+    {
+      id: 'sod-004',
+      code: 'SOD-HR-01',
+      title: 'Payroll Calculation Execution vs General Workflow Approval',
+      description: 'Human resources administrators computing monthly wage rolls should require independent CFO approval prior to treasury bank disbursement.',
+      primaryAction: 'hr:generate_payroll',
+      conflictingAction: 'workflows:approve',
+      riskSeverity: 'HIGH',
+      complianceStandard: 'NBR-VAT',
+      remediationRecommendation: 'Mandate independent financial comptroller review on all automated payroll runs.',
+    },
+    {
+      id: 'sod-005',
+      code: 'SOD-SALES-01',
+      title: 'Sales Invoicing Issuance vs Stock Master Configuration',
+      description: 'Commercial sales staff issuing customer invoices should not be permitted to alter product master pricing or inventory baseline records.',
+      primaryAction: 'sales:create_invoice',
+      conflictingAction: 'products:create',
+      riskSeverity: 'MEDIUM',
+      complianceStandard: 'COSO-2013',
+      remediationRecommendation: 'Segregate product catalog master data maintenance from commercial invoicing desks.',
+    },
+  ];
+
   // Helper method for atomic transactional journal creation
   public postJournalEntry(params: {
     reference: string;
@@ -2091,6 +2483,218 @@ class ERPDatabase {
     });
 
     return { success: true, purchaseOrder: newPO };
+  }
+
+  // --- SECURITY & ACCESS CONTROL MANAGEMENT METHODS ---
+
+  public updateUserRole(
+    userId: string,
+    newRole: RoleType,
+    updatedBy: string,
+    updatedByRole: string
+  ): { success: boolean; user?: SecurityUserAccount; error?: string } {
+    const user = this.securityUsers.find((u) => u.id === userId);
+    if (!user) {
+      return { success: false, error: `User with ID ${userId} not found.` };
+    }
+
+    const previousRole = user.role;
+    user.role = newRole;
+
+    this.addAuditLog({
+      user: updatedBy,
+      userRole: updatedByRole as any,
+      ipAddress: '127.0.0.1',
+      action: 'UPDATED_USER_ROLE',
+      module: 'Security & Governance',
+      entity: 'SecurityUserAccount',
+      entityId: user.id,
+      oldValue: `Role: ${previousRole}`,
+      newValue: `Role: ${newRole} (Modified by ${updatedBy})`,
+    });
+
+    return { success: true, user };
+  }
+
+  public updateUserStatus(
+    userId: string,
+    updates: Partial<SecurityUserAccount>,
+    updatedBy: string,
+    updatedByRole: string
+  ): { success: boolean; user?: SecurityUserAccount; error?: string } {
+    const user = this.securityUsers.find((u) => u.id === userId);
+    if (!user) {
+      return { success: false, error: `User with ID ${userId} not found.` };
+    }
+
+    const oldState = `Status: ${user.status}, MFA: ${user.mfaEnabled}`;
+    if (updates.status !== undefined) user.status = updates.status;
+    if (updates.mfaEnabled !== undefined) user.mfaEnabled = updates.mfaEnabled;
+    if (updates.customPermissions !== undefined) user.customPermissions = updates.customPermissions;
+    if (updates.assignedCompanyIds !== undefined) user.assignedCompanyIds = updates.assignedCompanyIds;
+
+    const newState = `Status: ${user.status}, MFA: ${user.mfaEnabled}`;
+
+    this.addAuditLog({
+      user: updatedBy,
+      userRole: updatedByRole as any,
+      ipAddress: '127.0.0.1',
+      action: 'UPDATED_USER_SECURITY_PROFILE',
+      module: 'Security & Governance',
+      entity: 'SecurityUserAccount',
+      entityId: user.id,
+      oldValue: oldState,
+      newValue: newState,
+    });
+
+    return { success: true, user };
+  }
+
+  public updateRolePermissions(
+    role: RoleType,
+    permissions: string[],
+    updatedBy: string,
+    updatedByRole: string
+  ): { success: boolean; permissions?: string[]; error?: string } {
+    if (!this.rolePermissions[role]) {
+      this.rolePermissions[role] = [];
+    }
+
+    const oldPerms = this.rolePermissions[role].join(', ');
+    this.rolePermissions[role] = [...permissions];
+
+    this.addAuditLog({
+      user: updatedBy,
+      userRole: updatedByRole as any,
+      ipAddress: '127.0.0.1',
+      action: 'UPDATED_ROLE_PERMISSIONS_MATRIX',
+      module: 'Security & Governance',
+      entity: 'RolePermissions',
+      entityId: role,
+      oldValue: oldPerms.slice(0, 100),
+      newValue: permissions.join(', ').slice(0, 100),
+    });
+
+    return { success: true, permissions: this.rolePermissions[role] };
+  }
+
+  public updateSecurityPolicies(
+    policies: Partial<SecurityPolicySettings>,
+    updatedBy: string,
+    updatedByRole: string
+  ): { success: boolean; policies: SecurityPolicySettings } {
+    const oldPolicies = JSON.stringify(this.securityPolicies);
+    this.securityPolicies = { ...this.securityPolicies, ...policies };
+
+    this.addAuditLog({
+      user: updatedBy,
+      userRole: updatedByRole as any,
+      ipAddress: '127.0.0.1',
+      action: 'UPDATED_ENTERPRISE_SECURITY_POLICIES',
+      module: 'Security & Governance',
+      entity: 'SecurityPolicySettings',
+      entityId: 'global-policy',
+      oldValue: oldPolicies.slice(0, 120),
+      newValue: JSON.stringify(this.securityPolicies).slice(0, 120),
+    });
+
+    return { success: true, policies: this.securityPolicies };
+  }
+
+  public runSoDAnalysis(): SoDScanReport {
+    const violations: SoDViolation[] = [];
+    const EXEMPT_ROLES = ['Super Admin', 'CEO'];
+
+    // 1. Analyze Role Configuration Combinations
+    for (const [roleName, perms] of Object.entries(this.rolePermissions)) {
+      if (EXEMPT_ROLES.includes(roleName)) continue;
+
+      for (const rule of this.sodRules) {
+        if (perms.includes(rule.primaryAction) && perms.includes(rule.conflictingAction)) {
+          violations.push({
+            ruleId: rule.id,
+            ruleCode: rule.code,
+            title: rule.title,
+            severity: rule.riskSeverity,
+            roleOrUser: roleName,
+            type: 'ROLE_CONFIG',
+            primaryAction: rule.primaryAction,
+            conflictingAction: rule.conflictingAction,
+            details: `Role '${roleName}' has both '${rule.primaryAction}' and '${rule.conflictingAction}', which creates a direct conflict under ${rule.complianceStandard}.`,
+            remediation: rule.remediationRecommendation,
+          });
+        }
+      }
+    }
+
+    // 2. Analyze Individual User Assignments
+    for (const user of this.securityUsers) {
+      if (user.status !== 'Active') continue;
+      if (EXEMPT_ROLES.includes(user.role)) continue;
+
+      const basePerms = this.rolePermissions[user.role] || [];
+      const userPerms = [...new Set([...basePerms, ...(user.customPermissions || [])])];
+
+      for (const rule of this.sodRules) {
+        if (userPerms.includes(rule.primaryAction) && userPerms.includes(rule.conflictingAction)) {
+          violations.push({
+            ruleId: rule.id,
+            ruleCode: rule.code,
+            title: rule.title,
+            severity: rule.riskSeverity,
+            roleOrUser: `${user.name} (${user.role})`,
+            type: 'USER_ASSIGNMENT',
+            primaryAction: rule.primaryAction,
+            conflictingAction: rule.conflictingAction,
+            details: `User '${user.name}' holds active rights for both '${rule.primaryAction}' and '${rule.conflictingAction}' simultaneously.`,
+            remediation: rule.remediationRecommendation,
+          });
+        }
+      }
+    }
+
+    let score = 100;
+    let critical = 0;
+    let high = 0;
+    let medium = 0;
+
+    for (const v of violations) {
+      if (v.severity === 'CRITICAL') {
+        score -= 15;
+        critical++;
+      } else if (v.severity === 'HIGH') {
+        score -= 8;
+        high++;
+      } else {
+        score -= 4;
+        medium++;
+      }
+    }
+
+    score = Math.max(0, Math.min(100, score));
+
+    let postureStatus: SoDScanReport['postureStatus'] = 'EXCELLENT';
+    if (score < 60 || critical >= 2) {
+      postureStatus = 'NON_COMPLIANT';
+    } else if (score < 75 || critical === 1) {
+      postureStatus = 'AT_RISK';
+    } else if (score < 90) {
+      postureStatus = 'ADEQUATE';
+    }
+
+    return {
+      timestamp: new Date().toISOString(),
+      overallScore: score,
+      postureStatus,
+      totalRulesEvaluated: this.sodRules.length,
+      rulesEvaluatedCount: this.sodRules.length,
+      violationsCount: violations.length,
+      criticalViolations: critical,
+      highViolations: high,
+      mediumViolations: medium,
+      violations,
+      conflictRules: this.sodRules,
+    };
   }
 }
 

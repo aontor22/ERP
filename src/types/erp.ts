@@ -586,3 +586,109 @@ export interface InventoryForecastSummary {
   items: InventoryForecastItem[];
 }
 
+// --- ENTERPRISE SECURITY & ACCESS CONTROL MODELS ---
+
+export interface SecurityUserAccount {
+  id: string;
+  name: string;
+  email: string;
+  designation: string;
+  department: string;
+  role: RoleType;
+  status: 'Active' | 'Suspended' | 'Inactive';
+  mfaEnabled: boolean;
+  lastLogin: string;
+  lastLoginIp: string;
+  assignedCompanyIds: string[];
+  customPermissions?: string[];
+  failedLoginAttempts: number;
+}
+
+export interface RoleDefinition {
+  role: RoleType;
+  title: string;
+  category: 'Executive' | 'Finance' | 'Operations' | 'Human Resources' | 'Governance & Audit';
+  isReadOnly: boolean;
+  isAdmin: boolean;
+  badgeLabel: string;
+  badgeColor: string;
+  description: string;
+  allowedModules: string[];
+  allowedActions: string[];
+  assignedUsersCount: number;
+}
+
+export interface SoDConflictRule {
+  id: string;
+  code: string;
+  title: string;
+  description: string;
+  primaryAction: string;
+  conflictingAction: string;
+  riskSeverity: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+  complianceStandard: 'SOX-404' | 'NBR-VAT' | 'ISO-27001' | 'COSO-2013';
+  remediationRecommendation: string;
+}
+
+export interface SoDViolation {
+  ruleId: string;
+  ruleCode: string;
+  title: string;
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+  roleOrUser: string;
+  type: 'ROLE_CONFIG' | 'USER_ASSIGNMENT';
+  primaryAction: string;
+  conflictingAction: string;
+  details: string;
+  remediation: string;
+}
+
+export type ActionPermission =
+  | 'products:create'
+  | 'inventory:adjust'
+  | 'inventory:forecast_apply'
+  | 'inventory:forecast_order'
+  | 'procurement:create'
+  | 'procurement:approve'
+  | 'sales:create_invoice'
+  | 'accounting:create_journal'
+  | 'accounting:manage_budget'
+  | 'hr:generate_payroll'
+  | 'manufacturing:create_order'
+  | 'manufacturing:update_order'
+  | 'workflows:approve'
+  | 'workflows:reject'
+  | 'settings:manage'
+  | 'organization:manage'
+  | 'audit:view'
+  | 'reports:export';
+
+export interface SoDScanReport {
+  timestamp: string;
+  overallScore: number; // 0 - 100
+  postureStatus: 'EXCELLENT' | 'ADEQUATE' | 'AT_RISK' | 'NON_COMPLIANT';
+  totalRulesEvaluated: number;
+  rulesEvaluatedCount: number;
+  violationsCount: number;
+  criticalViolations: number;
+  highViolations: number;
+  mediumViolations: number;
+  violations: SoDViolation[];
+  conflictRules: SoDConflictRule[];
+}
+
+export interface SecurityPolicySettings {
+  sessionTimeoutMinutes: number;
+  maxFailedLoginAttempts: number;
+  passwordMinLength: number;
+  requireSpecialChars: boolean;
+  passwordExpiryDays: number;
+  mfaPolicy: 'OPTIONAL' | 'ENFORCED_FOR_ADMINS' | 'ENFORCED_FOR_ALL';
+  immutableAuditLogEnforced: boolean;
+  ipWhitelistingEnabled: boolean;
+  whitelistedIpRanges: string[];
+  allowConcurrentSessions: boolean;
+  strictNegativeStockBlock: boolean;
+  doubleEntryBalancingCheck: boolean;
+}
+

@@ -10,8 +10,9 @@ import {
   RefreshCw,
   CheckCircle2,
   AlertTriangle,
+  Scale,
 } from 'lucide-react';
-import { AuditLogEntry } from '../../types/erp.js';
+import { AuditLogEntry, SoDScanReport } from '../../types/erp.js';
 import { DataTable, Column } from '../ui/DataTable.js';
 import { Badge } from '../ui/Badge.js';
 import { formatDate } from '../../lib/i18n.js';
@@ -23,15 +24,21 @@ interface AuditViewProps {
 
 export const AuditView: React.FC<AuditViewProps> = ({ logs }) => {
   const [securityStatus, setSecurityStatus] = useState<any>(null);
+  const [sodReport, setSodReport] = useState<SoDScanReport | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'security' | 'role_mutations' | 'financial'>('all');
 
   const fetchSecurityTelemetry = async () => {
     try {
       setLoadingStatus(true);
-      const data = await api.getSecurityStatus();
-      setSecurityStatus(data);
+      const [statusData, sodData] = await Promise.all([
+        api.getSecurityStatus(),
+        api.runSoDScan().catch(() => null),
+      ]);
+      setSecurityStatus(statusData);
+      if (sodData) setSodReport(sodData);
     } catch {
-      // Graceful fallback if server restart in progress
+      // Graceful fallback
     } finally {
       setLoadingStatus(false);
     }
@@ -40,6 +47,34 @@ export const AuditView: React.FC<AuditViewProps> = ({ logs }) => {
   useEffect(() => {
     fetchSecurityTelemetry();
   }, []);
+
+  const filteredLogs = logs.filter((l) => {
+    if (activeFilter === 'security') {
+      return (
+        l.action.includes('UNAUTHORIZED') ||
+        l.action.includes('BLOCKED') ||
+        l.module.includes('Security') ||
+        l.action.includes('SWITCHED_ACTIVE_ROLE')
+      );
+    }
+    if (activeFilter === 'role_mutations') {
+      return (
+        l.action.includes('ROLE') ||
+        l.action.includes('PERMISSIONS') ||
+        l.action.includes('SECURITY') ||
+        l.action.includes('USER')
+      );
+    }
+    if (activeFilter === 'financial') {
+      return (
+        l.module === 'Accounting' ||
+        l.module === 'Treasury' ||
+        l.action.includes('Journal') ||
+        l.action.includes('Invoice')
+      );
+    }
+    return true;
+  });
 
   const columns: Column<AuditLogEntry>[] = [
     {
@@ -269,10 +304,99 @@ export const AuditView: React.FC<AuditViewProps> = ({ logs }) => {
         </div>
       )}
 
+      {/* Separation of Duties (SoD) Compliance Health Card */}
+      {sodReport && (
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900">
+              <Scale className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-bold text-slate-900 dark:text-white">
+                  Separation of Duties (SoD) Statutory Compliance
+                </h3>
+                <span
+                  className={`text-3xs font-bold px-2 py-0.5 rounded ${
+                    sodReport.overallScore >= 95
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                  }`}
+                >
+                  Score: {sodReport.overallScore}/100 ({sodReport.postureStatus})
+                </span>
+              </div>
+              <p className="text-3xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Evaluated {sodReport.rulesEvaluatedCount} statutory conflict rules across all 18 enterprise roles and active user accounts.
+                {sodReport.violationsCount === 0
+                  ? ' Zero conflicting authority violations detected.'
+                  : ` Detected ${sodReport.violationsCount} conflicting permission pairings requiring segregation.`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-3xs font-mono text-slate-400">
+              Violations: {sodReport.violationsCount} (High: {sodReport.highSeverityCount})
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Audit Logs Filter Toolbar */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <button
+          onClick={() => setActiveFilter('all')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+            activeFilter === 'all'
+              ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-xs'
+              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50'
+          }`}
+        >
+          All Audit Trail ({logs.length})
+        </button>
+
+        <button
+          onClick={() => setActiveFilter('security')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+            activeFilter === 'security'
+              ? 'bg-rose-600 text-white shadow-xs'
+              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50'
+          }`}
+        >
+          <ShieldAlert className="w-3.5 h-3.5" />
+          <span>Security & Blocked Access</span>
+        </button>
+
+        <button
+          onClick={() => setActiveFilter('role_mutations')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+            activeFilter === 'role_mutations'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50'
+          }`}
+        >
+          <Lock className="w-3.5 h-3.5" />
+          <span>Role & Policy Changes</span>
+        </button>
+
+        <button
+          onClick={() => setActiveFilter('financial')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+            activeFilter === 'financial'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50'
+          }`}
+        >
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          <span>Financial Postings</span>
+        </button>
+      </div>
+
       {/* Logs Table */}
       <DataTable
         id="audit-trail-table"
-        data={logs}
+        data={filteredLogs}
         columns={columns}
         searchPlaceholder="Search actor, action, module, or entity ID..."
         exportFilename="apex-audit-trail.csv"

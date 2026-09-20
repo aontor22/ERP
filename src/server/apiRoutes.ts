@@ -1,7 +1,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { GoogleGenAI } from '@google/genai';
 import { db } from './erpDatabase.js';
-import { SystemConfig } from '../types/erp.js';
+import { SystemConfig, RoleType } from '../types/erp.js';
+import { ROLE_PROFILES } from '../lib/permissions.js';
 
 export const apiRouter = Router();
 
@@ -21,9 +22,10 @@ function getGenAI(): GoogleGenAI | null {
   return genAIClient;
 }
 
-// Permitted System Roles
+// Permitted System Roles (All 18 Enterprise Matrix Roles)
 export const ALLOWED_ROLES = [
   'Super Admin',
+  'System Admin',
   'CEO',
   'CFO',
   'Finance Manager',
@@ -35,8 +37,11 @@ export const ALLOWED_ROLES = [
   'Warehouse Manager',
   'Inventory Officer',
   'Production Manager',
+  'Quality Manager',
   'HR Manager',
   'Auditor',
+  'Employee',
+  'Viewer',
 ] as const;
 
 // Input Sanitization helper to protect against Stored XSS and control character injection
@@ -128,54 +133,61 @@ apiRouter.post('/auth/switch-role', (req: Request, res: Response) => {
     });
   }
 
+  const previousRole = currentSession.role;
   currentSession.role = role;
-  if (role === 'Auditor') {
-    currentSession.name = 'S. M. Rezwan, FCA';
-    currentSession.email = 'rezwan.audit@kpmg-bangladesh.com';
-    currentSession.permissions = ['audit:read', 'reports:read', 'ledgers:inspect'];
-  } else if (role === 'Procurement Manager') {
-    currentSession.name = 'Tariqul Islam';
-    currentSession.email = 'tariqul.procure@apex-group.com';
-    currentSession.permissions = ['po:create', 'po:approve', 'suppliers:manage', 'workflows:approve'];
-  } else if (role === 'Warehouse Manager') {
-    currentSession.name = 'Rahim Uddin';
-    currentSession.email = 'warehouse.head@apex-group.com';
-    currentSession.permissions = ['inventory:adjust', 'products:create', 'forecast:apply'];
-  } else if (role === 'Production Manager') {
-    currentSession.name = 'Jahangir Alam';
-    currentSession.email = 'jahangir.prod@apex-group.com';
-    currentSession.permissions = ['production:create', 'boms:manage', 'mrp:view'];
-  } else if (role === 'Accountant') {
-    currentSession.name = 'Farzana Yasmin';
-    currentSession.email = 'farzana.y@apex-group.com';
-    currentSession.permissions = ['journals:create', 'invoices:create', 'reports:read'];
-  } else if (role === 'Sales Manager') {
-    currentSession.name = 'Kamrul Hasan';
-    currentSession.email = 'sales.kamrul@apex-group.com';
-    currentSession.permissions = ['sales:create', 'invoices:create', 'customers:manage'];
-  } else if (role === 'HR Manager') {
-    currentSession.name = 'Nusrat Jahan';
-    currentSession.email = 'nusrat.hr@apex-group.com';
-    currentSession.permissions = ['payroll:generate', 'employees:manage'];
-  } else if (role === 'Super Admin' || role === 'CEO') {
+
+  // Map to realistic enterprise identity from database
+  const matchingUser = db.securityUsers.find((u) => u.role === role);
+  if (matchingUser) {
+    currentSession.id = matchingUser.id;
+    currentSession.name = matchingUser.name;
+    currentSession.email = matchingUser.email;
+    currentSession.department = matchingUser.department;
+  } else if (role === 'CEO') {
     currentSession.name = 'Syed Manzur Elahi';
     currentSession.email = 'chairman@apex-group.com';
-    currentSession.permissions = ['*'];
+    currentSession.department = 'Executive Board';
+  } else if (role === 'Finance Manager') {
+    currentSession.name = 'Shahadat Hossain, ACA';
+    currentSession.email = 'shahadat.fin@apex-group.com';
+    currentSession.department = 'Finance & Accounts';
+  } else if (role === 'Purchase Officer') {
+    currentSession.name = 'Kamal Uddin';
+    currentSession.email = 'kamal.po@apex-group.com';
+    currentSession.department = 'Procurement';
+  } else if (role === 'Inventory Officer') {
+    currentSession.name = 'Belal Hossain';
+    currentSession.email = 'belal.stock@apex-group.com';
+    currentSession.department = 'Logistics & Warehousing';
+  } else if (role === 'Sales Executive') {
+    currentSession.name = 'Rasheda Khatun';
+    currentSession.email = 'rasheda.sales@apex-group.com';
+    currentSession.department = 'Commercial Sales';
+  } else if (role === 'Viewer') {
+    currentSession.name = 'Kabir Chowdhury';
+    currentSession.email = 'kabir.board@apex-holdings.com';
+    currentSession.department = 'External Stakeholder / Investor';
   } else {
     currentSession.name = 'Anwar Hossain, FCMA';
     currentSession.email = 'cfo.anwar@apex-group.com';
-    currentSession.permissions = ['finance:*', 'approvals:*', 'reports:*'];
+    currentSession.department = 'Finance & Treasury';
   }
+
+  // Synchronize permissions from dynamic role permissions matrix
+  const configuredPerms = db.rolePermissions[role] || [];
+  currentSession.permissions = configuredPerms.length > 0 ? configuredPerms : ['reports:read'];
 
   db.addAuditLog({
     user: currentSession.name,
     userRole: currentSession.role,
     ipAddress: req.ip || '127.0.0.1',
-    action: 'Switched Active Role',
-    module: 'Security',
+    action: 'SWITCHED_ACTIVE_ROLE',
+    module: 'Security & Access Control',
     entity: 'UserSession',
     entityId: currentSession.id,
-    newValue: `Role switched to ${role}`,
+    oldValue: `Previous Role: ${previousRole}`,
+    newValue: `Active role changed to ${role} (${currentSession.name})`,
+    companyId: currentSession.currentCompanyId,
   });
 
   res.json({ success: true, data: currentSession });
@@ -1540,4 +1552,212 @@ apiRouter.get('/security/status', (req: Request, res: Response) => {
       },
     },
   });
+});
+
+// --- ENTERPRISE RBAC & SECURITY GOVERNANCE ENDPOINTS ---
+
+// Get all roles, their configurations, dynamic permissions, and user counts
+apiRouter.get('/security/roles', (req: Request, res: Response) => {
+  const rolesData = ALLOWED_ROLES.map((roleName) => {
+    const profile = ROLE_PROFILES[roleName as RoleType] || {
+      role: roleName,
+      title: roleName,
+      category: 'Operations',
+      isReadOnly: false,
+      isAdmin: false,
+      badgeLabel: roleName,
+      badgeColor: 'bg-slate-100 text-slate-700',
+      description: 'Enterprise role definition.',
+      allowedModules: ['dashboard'],
+      allowedActions: [],
+    };
+
+    const activeActions = db.rolePermissions[roleName] || profile.allowedActions || [];
+    const assignedUsers = db.securityUsers.filter((u) => u.role === roleName).length;
+
+    return {
+      role: roleName,
+      title: profile.title,
+      category: profile.category,
+      isReadOnly: profile.isReadOnly,
+      isAdmin: profile.isAdmin,
+      badgeLabel: profile.badgeLabel,
+      badgeColor: profile.badgeColor,
+      description: profile.description,
+      allowedModules: profile.allowedModules,
+      allowedActions: activeActions,
+      assignedUsersCount: assignedUsers,
+    };
+  });
+
+  res.json({ success: true, data: rolesData });
+});
+
+// Update permissions matrix for a specific role
+apiRouter.put(
+  '/security/roles/:role',
+  requireRoles(['Super Admin', 'System Admin', 'CEO']),
+  (req: Request, res: Response) => {
+    const roleParam = req.params.role as RoleType;
+    const { permissions } = req.body;
+
+    if (!ALLOWED_ROLES.includes(roleParam)) {
+      return res.status(400).json({ success: false, error: 'INVALID_ROLE', message: 'Role does not exist in registry.' });
+    }
+
+    if (!Array.isArray(permissions)) {
+      return res.status(400).json({ success: false, error: 'INVALID_PAYLOAD', message: 'Permissions must be an array of strings.' });
+    }
+
+    // Protect Super Admin and CEO from being stripped of permissions
+    if ((roleParam === 'Super Admin' || roleParam === 'CEO') && permissions.length < 5) {
+      return res.status(400).json({
+        success: false,
+        error: 'RESTRICTED_ROLE_MUTATION',
+        message: 'Super Admin and CEO roles must maintain core executive permissions.',
+      });
+    }
+
+    const sanitizedPerms = permissions.map((p: any) => sanitizeText(String(p), 60));
+    const result = db.updateRolePermissions(roleParam, sanitizedPerms, currentSession.name, currentSession.role);
+
+    // If active session belongs to this role, update currentSession immediately
+    if (currentSession.role === roleParam) {
+      currentSession.permissions = sanitizedPerms;
+    }
+
+    res.json({ success: true, data: result });
+  }
+);
+
+// Get all enterprise user accounts with security metadata
+apiRouter.get('/security/users', (req: Request, res: Response) => {
+  res.json({ success: true, data: db.securityUsers });
+});
+
+// Update a user's role, status, MFA, or company assignments
+apiRouter.put(
+  '/security/users/:id',
+  requireRoles(['Super Admin', 'System Admin', 'CEO']),
+  (req: Request, res: Response) => {
+    const userId = req.params.id;
+    const { role, status, mfaEnabled, customPermissions, assignedCompanyIds } = req.body;
+
+    if (role && !ALLOWED_ROLES.includes(role)) {
+      return res.status(400).json({ success: false, message: 'Invalid role provided.' });
+    }
+
+    const updates: any = {};
+    if (role) updates.role = role;
+    if (status && ['Active', 'Suspended', 'Inactive'].includes(status)) updates.status = status;
+    if (typeof mfaEnabled === 'boolean') updates.mfaEnabled = mfaEnabled;
+    if (Array.isArray(customPermissions)) updates.customPermissions = customPermissions.map((p) => sanitizeText(p, 60));
+    if (Array.isArray(assignedCompanyIds)) updates.assignedCompanyIds = assignedCompanyIds;
+
+    const result = db.updateUserStatus(userId, updates, currentSession.name, currentSession.role);
+    if (!result.success) {
+      return res.status(404).json({ success: false, message: result.error });
+    }
+
+    if (role) {
+      db.updateUserRole(userId, role, currentSession.name, currentSession.role);
+    }
+
+    // If current session is this user, refresh currentSession
+    if (currentSession.id === userId) {
+      if (role) currentSession.role = role;
+      if (updates.assignedCompanyIds) currentSession.assignedCompanyIds = updates.assignedCompanyIds;
+    }
+
+    res.json({ success: true, data: result.user });
+  }
+);
+
+// Get global security & governance policies
+apiRouter.get('/security/policies', (req: Request, res: Response) => {
+  res.json({ success: true, data: db.securityPolicies });
+});
+
+// Update global security & governance policies
+apiRouter.put(
+  '/security/policies',
+  requireRoles(['Super Admin', 'System Admin', 'CEO']),
+  (req: Request, res: Response) => {
+    const {
+      sessionTimeoutMinutes,
+      maxFailedLoginAttempts,
+      passwordMinLength,
+      requireSpecialChars,
+      passwordExpiryDays,
+      mfaPolicy,
+      immutableAuditLogEnforced,
+      ipWhitelistingEnabled,
+      whitelistedIpRanges,
+      allowConcurrentSessions,
+      strictNegativeStockBlock,
+      doubleEntryBalancingCheck,
+    } = req.body;
+
+    const updates: any = {};
+    if (typeof sessionTimeoutMinutes === 'number') updates.sessionTimeoutMinutes = Math.max(5, Math.min(480, sessionTimeoutMinutes));
+    if (typeof maxFailedLoginAttempts === 'number') updates.maxFailedLoginAttempts = Math.max(3, Math.min(10, maxFailedLoginAttempts));
+    if (typeof passwordMinLength === 'number') updates.passwordMinLength = Math.max(8, Math.min(32, passwordMinLength));
+    if (typeof requireSpecialChars === 'boolean') updates.requireSpecialChars = requireSpecialChars;
+    if (typeof passwordExpiryDays === 'number') updates.passwordExpiryDays = Math.max(30, Math.min(365, passwordExpiryDays));
+    if (mfaPolicy && ['OPTIONAL', 'ENFORCED_FOR_ADMINS', 'ENFORCED_FOR_ALL'].includes(mfaPolicy)) updates.mfaPolicy = mfaPolicy;
+    if (typeof immutableAuditLogEnforced === 'boolean') updates.immutableAuditLogEnforced = immutableAuditLogEnforced;
+    if (typeof ipWhitelistingEnabled === 'boolean') updates.ipWhitelistingEnabled = ipWhitelistingEnabled;
+    if (Array.isArray(whitelistedIpRanges)) updates.whitelistedIpRanges = whitelistedIpRanges.map((ip: any) => sanitizeText(String(ip), 50));
+    if (typeof allowConcurrentSessions === 'boolean') updates.allowConcurrentSessions = allowConcurrentSessions;
+    if (typeof strictNegativeStockBlock === 'boolean') {
+      updates.strictNegativeStockBlock = strictNegativeStockBlock;
+      db.config.enableStrictNegativeStockBlock = strictNegativeStockBlock;
+    }
+    if (typeof doubleEntryBalancingCheck === 'boolean') updates.doubleEntryBalancingCheck = doubleEntryBalancingCheck;
+
+    const result = db.updateSecurityPolicies(updates, currentSession.name, currentSession.role);
+    res.json({ success: true, data: result.policies });
+  }
+);
+
+// Execute Separation of Duties (SoD) & Conflict Analysis Scan
+apiRouter.post('/security/sod-scan', (req: Request, res: Response) => {
+  const report = db.runSoDAnalysis();
+
+  db.addAuditLog({
+    user: currentSession.name,
+    userRole: currentSession.role,
+    ipAddress: req.ip || '127.0.0.1',
+    action: 'EXECUTED_SOD_COMPLIANCE_SCAN',
+    module: 'Security & Governance',
+    entity: 'SoDScanReport',
+    entityId: `scan-${Date.now()}`,
+    newValue: `Score: ${report.overallScore}/100, Status: ${report.postureStatus}, Violations: ${report.violationsCount}`,
+    companyId: currentSession.currentCompanyId,
+  });
+
+  res.json({ success: true, data: report });
+});
+
+// Get security-specific incident & event logs
+apiRouter.get('/security/events', (req: Request, res: Response) => {
+  const securityActions = [
+    'UNAUTHORIZED_ACCESS_BLOCKED',
+    'SWITCHED_ACTIVE_ROLE',
+    'UPDATED_USER_ROLE',
+    'UPDATED_USER_SECURITY_PROFILE',
+    'UPDATED_ROLE_PERMISSIONS_MATRIX',
+    'UPDATED_ENTERPRISE_SECURITY_POLICIES',
+    'EXECUTED_SOD_COMPLIANCE_SCAN',
+  ];
+
+  const events = db.auditLogs.filter(
+    (l) =>
+      l.module === 'Security' ||
+      l.module === 'Security & Governance' ||
+      l.module === 'Security & Access Control' ||
+      securityActions.some((act) => l.action.includes(act))
+  );
+
+  res.json({ success: true, data: events });
 });

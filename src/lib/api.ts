@@ -1,4 +1,10 @@
-import { InventoryForecastSummary } from '../types/erp.js';
+import {
+  InventoryForecastSummary,
+  RoleDefinition,
+  SecurityPolicySettings,
+  SecurityUserAccount,
+  SoDScanReport,
+} from '../types/erp.js';
 
 // API Client for ApexERP
 
@@ -127,4 +133,26 @@ export const api = {
 
   // Security & Compliance Telemetry
   getSecurityStatus: () => fetchApi<any>('/api/v1/security/status'),
+
+  // Enterprise RBAC & Security Governance
+  getSecurityRoles: () => fetchApi<RoleDefinition[]>('/api/v1/security/roles'),
+  updateRolePermissions: (role: string, permissions: string[]) =>
+    fetchApi<any>(`/api/v1/security/roles/${encodeURIComponent(role)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ permissions }),
+    }),
+  getSecurityUsers: () => fetchApi<SecurityUserAccount[]>('/api/v1/security/users'),
+  updateSecurityUser: (id: string, updates: Partial<SecurityUserAccount>) =>
+    fetchApi<SecurityUserAccount>(`/api/v1/security/users/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    }),
+  getSecurityPolicies: () => fetchApi<SecurityPolicySettings>('/api/v1/security/policies'),
+  updateSecurityPolicies: (policies: Partial<SecurityPolicySettings>) =>
+    fetchApi<SecurityPolicySettings>('/api/v1/security/policies', {
+      method: 'PUT',
+      body: JSON.stringify(policies),
+    }),
+  runSoDScan: () => fetchApi<SoDScanReport>('/api/v1/security/sod-scan', { method: 'POST' }),
+  getSecurityEvents: () => fetchApi<any[]>('/api/v1/security/events'),
 };
