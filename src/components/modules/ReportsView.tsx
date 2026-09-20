@@ -712,22 +712,16 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       };
     }
 
-    const isFavorable = metric === 'expenses' ? !variance.isPositive : variance.isPositive;
-
-    if (isFavorable) {
+    // Color-coded conditional formatting:
+    // Green for positive percentage variance (> 0), Red for negative percentage variance (< 0)
+    if (variance.isPositive) {
       return {
-        badgeStyle: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
-        icon: variance.isPositive ? ('up' as const) : ('down' as const),
+        badgeStyle: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800',
+        icon: 'up' as const,
       };
     } else {
-      if (metric === 'expenses') {
-        return {
-          badgeStyle: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
-          icon: 'up' as const,
-        };
-      }
       return {
-        badgeStyle: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800',
+        badgeStyle: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800',
         icon: 'down' as const,
       };
     }
@@ -1593,7 +1587,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               <KpiSparkline
                 id="kpi-expenses-sparkline"
                 data={expensesSparklineData}
-                favorable={!previousComparison.expensesVariance.isPositive}
+                favorable={previousComparison.expensesVariance.isPositive}
                 tooltipPrefix="Operating Costs Movement"
                 formatValue={formatCurrency}
               />
