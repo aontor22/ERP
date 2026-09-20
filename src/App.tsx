@@ -470,6 +470,7 @@ export default function App() {
                 products={products}
                 invoices={invoices}
                 employees={employees}
+                journals={journals}
                 currentCompany={currentCompany}
                 currentUser={currentUser}
                 companies={companies}
