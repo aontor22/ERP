@@ -1164,7 +1164,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   }, [reportType, dateStamp]);
 
   const handlePrint = () => {
-    window.print();
+    try {
+      window.print();
+    } catch (err) {
+      console.warn('Window print was interrupted or blocked by frame sandbox:', err);
+    }
   };
 
   const activeCount =
